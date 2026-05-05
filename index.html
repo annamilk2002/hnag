@@ -10,6 +10,10 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-analytics.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+      from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc }
+      from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAycG955ijRjWlBrjQK1z2KQ1FpsXPArkE",
@@ -23,6 +27,96 @@
 
     const app = initializeApp(firebaseConfig);
     const analytics = getAnalytics(app);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+
+    // ── Firestore save/load ──────────────────────────────────────────────────
+    window.firestoreSave = async () => {
+      const user = auth.currentUser;
+      if (!user) return;
+      try {
+        await setDoc(doc(db, 'users', user.uid), {
+          recipes:   JSON.stringify(window._recipes   || []),
+          mealPlan:  JSON.stringify(window._mealPlan  || []),
+          profile:   JSON.stringify(window._profile   || {}),
+          countries: JSON.stringify(window._countries || []),
+        });
+      } catch(e) { console.error('Firestore save error:', e); }
+    };
+
+    window.firestoreLoad = async (uid) => {
+      try {
+        const snap = await getDoc(doc(db, 'users', uid));
+        if (snap.exists()) {
+          const d = snap.data();
+          return {
+            recipes:   JSON.parse(d.recipes   || '[]'),
+            mealPlan:  JSON.parse(d.mealPlan  || '[]'),
+            profile:   JSON.parse(d.profile   || '{}'),
+            countries: JSON.parse(d.countries || '[]'),
+          };
+        }
+      } catch(e) { console.error('Firestore load error:', e); }
+      return null;
+    };
+
+    // ── Auth state ───────────────────────────────────────────────────────────
+    onAuthStateChanged(auth, async (user) => {
+      const loginBtn  = document.getElementById('btn-login');
+      const logoutBtn = document.getElementById('btn-logout');
+      const userInfo  = document.getElementById('user-info');
+
+      if (user) {
+        loginBtn.style.display  = 'none';
+        logoutBtn.style.display = 'inline-flex';
+        userInfo.style.display  = 'flex';
+        userInfo.innerHTML = `<img src="${user.photoURL}" class="user-avatar" alt="avatar"/><span class="user-name">${user.displayName}</span>`;
+
+        // Load data from Firestore
+        showSyncStatus('loading');
+        const data = await window.firestoreLoad(user.uid);
+        if (data) {
+          window._recipes   = data.recipes;
+          window._mealPlan  = data.mealPlan;
+          window._profile   = data.profile;
+          window._countries = data.countries.length ? data.countries : window._countries;
+          if (typeof window.applyFirestoreData === 'function') window.applyFirestoreData();
+        }
+        showSyncStatus('synced');
+      } else {
+        loginBtn.style.display  = 'inline-flex';
+        logoutBtn.style.display = 'none';
+        userInfo.style.display  = 'none';
+        userInfo.innerHTML = '';
+        showSyncStatus('offline');
+        // Reset to empty state when logged out
+        if (typeof window.resetAppData === 'function') window.resetAppData();
+      }
+    });
+
+    function showSyncStatus(state) {
+      const el = document.getElementById('sync-status');
+      if (!el) return;
+      const map = {
+        loading: { text: '⏳ Đang tải...', color: '#8C7B6B' },
+        synced:  { text: '✅ Đã đồng bộ', color: '#6B9E78' },
+        saving:  { text: '💾 Đang lưu...', color: '#C8845A' },
+        offline: { text: '🔒 Chưa đăng nhập', color: '#B8A898' },
+        error:   { text: '❌ Lỗi đồng bộ',   color: '#C0504D' },
+      };
+      const s = map[state] || map.offline;
+      el.textContent = s.text;
+      el.style.color = s.color;
+    }
+    window.showSyncStatus = showSyncStatus;
+
+    window.loginWithGoogle = () => {
+      signInWithPopup(auth, provider).catch(err => alert('Đăng nhập thất bại: ' + err.message));
+    };
+    window.logoutGoogle = () => {
+      signOut(auth).catch(err => alert('Đăng xuất thất bại: ' + err.message));
+    };
   </script>
 <style>
   :root {
@@ -81,7 +175,29 @@
   .nav-btn.active { background: var(--warm); color: #fff; font-weight: 600; }
   .nav-btn:hover:not(.active) { background: var(--beige-deep); }
 
-  .lang-switcher { display: flex; gap: 4px; }
+  /* ── AUTH ── */
+  .auth-area { display: flex; align-items: center; gap: 8px; }
+  #user-info { display: none; align-items: center; gap: 8px; }
+  .user-avatar { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; border: 2px solid var(--warm-light); }
+  .user-name { font-size: 13px; font-weight: 600; color: var(--text); max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .btn-google {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 14px; border-radius: 20px; border: 1px solid var(--border);
+    background: #fff; color: var(--text); font-size: 13px; font-weight: 600;
+    cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .2s;
+    white-space: nowrap;
+  }
+  .btn-google:hover { background: var(--beige-deep); border-color: var(--warm-light); }
+  .btn-google svg { flex-shrink: 0; }
+  #btn-logout {
+    display: none; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: 20px; border: 1px solid var(--border);
+    background: transparent; color: var(--text-muted); font-size: 12px; font-weight: 600;
+    cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .2s;
+  }
+  #btn-logout:hover { background: #FDEAEA; color: var(--danger); border-color: #f5c6c6; }
+
+    .lang-switcher { display: flex; gap: 4px; }
   .lang-btn {
     padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;
     cursor: pointer; border: 1px solid var(--border); background: transparent;
@@ -405,12 +521,28 @@
     <button class="nav-btn" onclick="showTab('analytics')" data-tab="analytics" id="nav-analytics">Analytics</button>
     <button class="nav-btn" onclick="showTab('profile')" data-tab="profile" id="nav-profile">Profile</button>
   </nav>
-  <div class="lang-switcher">
-    <button class="lang-btn" onclick="setLang('vi')" id="lang-vi">VI</button>
-    <button class="lang-btn active" onclick="setLang('en')" id="lang-en">EN</button>
-    <button class="lang-btn" onclick="setLang('ru')" id="lang-ru">RU</button>
+  <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+    <div class="lang-switcher">
+      <button class="lang-btn" onclick="setLang('vi')" id="lang-vi">VI</button>
+      <button class="lang-btn active" onclick="setLang('en')" id="lang-en">EN</button>
+      <button class="lang-btn" onclick="setLang('ru')" id="lang-ru">RU</button>
+    </div>
+    <div class="auth-area">
+      <div id="user-info"></div>
+      <button class="btn-google" id="btn-login" onclick="loginWithGoogle()">
+        <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Đăng nhập với Google
+      </button>
+      <button id="btn-logout" onclick="logoutGoogle()">
+        ↩ Đăng xuất
+      </button>
+    </div>
   </div>
 </header>
+<!-- Sync status bar -->
+<div id="sync-bar" style="text-align:center;padding:4px 0;font-size:12px;background:var(--beige-deep);border-bottom:1px solid var(--border);">
+  <span id="sync-status" style="color:var(--text-muted);">🔒 Chưa đăng nhập</span>
+</div>
 
 <!-- ── MAIN ── -->
 <main>
@@ -680,17 +812,54 @@ let ingQuery = '';
 let mealPlanView = 'day';
 let editingId = null;
 
-function load(k, def) { try { return JSON.parse(localStorage.getItem(k)) || def; } catch { return def; } }
-let recipes = load('rcp_recipes', SAMPLE);
-let mealPlan = load('rcp_mealplan', []);
-let profile = load('rcp_profile', {name:'My Kitchen', calorieGoal:2000, notes:''});
-let countries = load('rcp_countries', ['Vietnam','Japan','Italy','France','Thailand','China','India','Mexico','Russia','Korea']);
+// ── Data stored in window so Firebase module can access them ─────────────────
+const DEFAULT_COUNTRIES = ['Vietnam','Japan','Italy','France','Thailand','China','India','Mexico','Russia','Korea'];
+window._recipes   = [...SAMPLE];
+window._mealPlan  = [];
+window._profile   = {name:'My Kitchen', calorieGoal:2000, notes:''};
+window._countries = [...DEFAULT_COUNTRIES];
 
-function save() {
-  localStorage.setItem('rcp_recipes', JSON.stringify(recipes));
-  localStorage.setItem('rcp_mealplan', JSON.stringify(mealPlan));
-  localStorage.setItem('rcp_profile', JSON.stringify(profile));
-  localStorage.setItem('rcp_countries', JSON.stringify(countries));
+// Proxy vars used by the rest of the app
+let recipes   = window._recipes;
+let mealPlan  = window._mealPlan;
+let profile   = window._profile;
+let countries = window._countries;
+
+// Sync window refs -> local vars after Firestore load
+window.applyFirestoreData = () => {
+  recipes   = window._recipes;
+  mealPlan  = window._mealPlan;
+  profile   = window._profile;
+  countries = window._countries;
+  renderCategoryPills();
+  renderCountryPills();
+  renderRecipes();
+  initMealPlanDate();
+};
+
+// Reset when logged out
+window.resetAppData = () => {
+  recipes   = window._recipes   = [...SAMPLE];
+  mealPlan  = window._mealPlan  = [];
+  profile   = window._profile   = {name:'My Kitchen', calorieGoal:2000, notes:''};
+  countries = window._countries = [...DEFAULT_COUNTRIES];
+  renderCategoryPills();
+  renderCountryPills();
+  renderRecipes();
+};
+
+async function save() {
+  // Keep window refs in sync
+  window._recipes   = recipes;
+  window._mealPlan  = mealPlan;
+  window._profile   = profile;
+  window._countries = countries;
+  // Save to Firestore if logged in
+  if (typeof window.firestoreSave === 'function') {
+    window.showSyncStatus && window.showSyncStatus('saving');
+    await window.firestoreSave();
+    window.showSyncStatus && window.showSyncStatus('synced');
+  }
 }
 
 // ─── TRANSLATIONS APPLY ────────────────────────────────────────────────────────
@@ -1292,8 +1461,9 @@ document.addEventListener('DOMContentLoaded', () => {
   renderCountryPills();
   renderRecipes();
   initMealPlanDate();
-  // set today as default date
   document.getElementById('mp-date').value = new Date().toISOString().slice(0,10);
+  // Show offline status until auth resolves
+  if (window.showSyncStatus) window.showSyncStatus('offline');
 });
 </script>
 </body>
