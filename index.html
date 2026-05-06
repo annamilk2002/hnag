@@ -530,6 +530,50 @@
     font-size: 28px; margin-bottom: 22px;
   }
 
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: #1F2937; color: #fff; padding: 12px 22px; border-radius: 24px;
+    font-size: 14px; font-weight: 500; z-index: 9999; transition: transform .3s ease, opacity .3s ease;
+    opacity: 0; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,.25);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  /* ── DRAFT ── */
+  .draft-ribbon {
+    position: absolute; top: 10px; left: -2px;
+    background: #6B7280; color: #fff;
+    font-size: 10px; font-weight: 700; letter-spacing: .8px;
+    padding: 3px 10px 3px 8px; border-radius: 0 4px 4px 0;
+    text-transform: uppercase; z-index: 2;
+    box-shadow: 1px 1px 4px rgba(0,0,0,.18);
+  }
+  .recipe-card.is-draft { opacity: .88; }
+  .recipe-card.is-draft .card-photo { filter: brightness(.93); }
+  .draft-tab-pill {
+    padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1px dashed #9CA3AF; background: transparent;
+    color: #6B7280; transition: all .2s; display: inline-flex; align-items: center; gap: 5px;
+  }
+  .draft-tab-pill.active { background: #6B7280; color: #fff; border-color: #6B7280; }
+  .draft-tab-pill:hover:not(.active) { border-color: #6B7280; color: #374151; }
+  .draft-count-badge {
+    background: var(--warm); color: #fff; border-radius: 10px;
+    padding: 1px 6px; font-size: 10px; font-weight: 700; min-width: 18px; text-align: center;
+  }
+  .btn-draft {
+    padding: 10px 20px; border-radius: var(--radius-sm); border: 1px dashed #9CA3AF;
+    cursor: pointer; font-size: 13px; font-family: 'DM Sans', sans-serif;
+    font-weight: 600; transition: all .2s; background: transparent; color: #6B7280;
+    white-space: nowrap;
+  }
+  .btn-draft:hover { background: #F3F4F6; border-color: #6B7280; color: #374151; }
+  .draft-info-bar {
+    background: #F3F4F6; border: 1px solid #E5E7EB; border-radius: var(--radius-sm);
+    padding: 8px 14px; margin-bottom: 16px; font-size: 12px; color: #6B7280;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+
   /* ── EMPTY ── */
   .empty { text-align: center; padding: 60px 0; color: var(--text-muted); }
   .empty-icon { font-size: 52px; margin-bottom: 16px; }
@@ -628,6 +672,23 @@
 
     <!-- Category pills -->
     <div class="pill-row" id="cat-pills"></div>
+
+    <!-- Draft filter -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+      <span class="draft-tab-pill" id="draft-pill-all" onclick="setDraftFilter('all')" style="display:none">
+        📋 Все
+      </span>
+      <span class="draft-tab-pill active" id="draft-pill-published" onclick="setDraftFilter('published')" style="display:none">
+        ✅ Опубликованные
+      </span>
+      <span class="draft-tab-pill" id="draft-pill-drafts" onclick="setDraftFilter('drafts')" style="display:none">
+        ✏ Черновики <span class="draft-count-badge" id="draft-count">0</span>
+      </span>
+    </div>
+    <!-- Draft info bar (shown when viewing drafts) -->
+    <div class="draft-info-bar hidden" id="draft-info-bar">
+      ✏ Вы просматриваете черновики. Нажмите на карточку, чтобы открыть и отредактировать.
+    </div>
 
     <!-- Country filter -->
     <div class="country-section">
@@ -805,7 +866,8 @@
     <input type="hidden" id="f-photo-data"/>
     <div class="flex-end">
       <button class="btn btn-secondary" onclick="closeModal('recipe-modal')" data-i="recipe.cancel">Cancel</button>
-      <button class="btn btn-primary" onclick="saveRecipeForm()" data-i="recipe.save">Save</button>
+      <button class="btn-draft" onclick="saveRecipeForm('draft')" title="Сохранить как черновик — можно доделать позже">💾 Черновик</button>
+      <button class="btn btn-primary" onclick="saveRecipeForm('publish')" data-i="recipe.save">Опубликовать</button>
     </div>
   </div>
 </div>
@@ -940,6 +1002,7 @@ let countryFilter = '';
 let ingQuery = '';
 let mealPlanView = 'day';
 let editingId = null;
+let draftFilter = 'all'; // 'all' | 'published' | 'drafts'
 
 // ── Data stored in window so Firebase module can access them ─────────────────
 const DEFAULT_COUNTRIES = ['Vietnam','Japan','Italy','France','Thailand','China','India','Mexico','Russia','Korea'];
@@ -1109,6 +1172,11 @@ function filterCountry(c) {
 function renderRecipes() {
   const search = document.getElementById('search-input')?.value.toLowerCase() || '';
   let list = recipes;
+
+  // Draft filter
+  if (draftFilter === 'published') list = list.filter(r => !r.isDraft);
+  else if (draftFilter === 'drafts') list = list.filter(r => r.isDraft);
+
   if (selectedCat !== 'all') list = list.filter(r => r.category === selectedCat);
   if (countryFilter) list = list.filter(r => r.country === countryFilter);
   if (search) list = list.filter(r =>
@@ -1119,13 +1187,27 @@ function renderRecipes() {
     list = list.filter(r => terms.some(term => r.ingredients.some(i => i.name.toLowerCase().includes(term))));
   }
 
+  // Update draft pills visibility and count
+  const draftCount = recipes.filter(r => r.isDraft).length;
+  const isLoggedIn = !window._isGuest;
+  ['draft-pill-all','draft-pill-published','draft-pill-drafts'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = (isLoggedIn && draftCount > 0) ? '' : 'none';
+  });
+  const countEl = document.getElementById('draft-count');
+  if (countEl) countEl.textContent = draftCount;
+  const infoBar = document.getElementById('draft-info-bar');
+  if (infoBar) infoBar.classList.toggle('hidden', draftFilter !== 'drafts');
+
   const grid = document.getElementById('recipe-grid');
   const empty = document.getElementById('recipe-empty');
 
   if (list.length === 0) {
     grid.innerHTML = '';
     empty.classList.remove('hidden');
-    document.getElementById('empty-text').textContent = (search || ingQuery) ? T[lang].noResults : T[lang].empty;
+    document.getElementById('empty-text').textContent =
+      draftFilter === 'drafts' ? '✏ Черновиков пока нет' :
+      (search || ingQuery) ? T[lang].noResults : T[lang].empty;
     return;
   }
   empty.classList.add('hidden');
@@ -1133,7 +1215,6 @@ function renderRecipes() {
   grid.innerHTML = list.map(r => {
     const bg = r.photo ? `background-image:url(${r.photo})` : '';
     const emoji = !r.photo ? '🍽' : '';
-    // Show display name in current language
     const displayName = r.nameI18n?.[lang] || r.name;
     const displayDesc = r.descI18n?.[lang] || r.description;
     // Time badge
@@ -1149,8 +1230,11 @@ function renderRecipes() {
       ? `<span class="badge diameter-badge">⌀${r.diameter}см</span>` : '';
     const dateBadge = r.cookingDate
       ? `<div class="card-date-badge">📅 ${r.cookingDate}</div>` : '';
-    return `<div class="recipe-card" onclick="openDetail('${r.id}')">
+    const draftRibbon = r.isDraft
+      ? `<div class="draft-ribbon">Черновик</div>` : '';
+    return `<div class="recipe-card${r.isDraft ? ' is-draft' : ''}" onclick="${r.isDraft ? `openEditModal('${r.id}')` : `openDetail('${r.id}')`}">
       <div class="card-photo" style="${bg}">
+        ${draftRibbon}
         ${emoji ? `<span style="font-size:42px">${emoji}</span>` : ''}
         <div class="card-actions">
           <button class="card-action-btn edit" onclick="event.stopPropagation();openEditModal('${r.id}')">✏</button>
@@ -1158,13 +1242,12 @@ function renderRecipes() {
         </div>
       </div>
       <div class="card-body">
-        <div class="card-name">${displayName}</div>
-        <div class="card-desc">${displayDesc}</div>
+        <div class="card-name">${displayName}${r.isDraft ? ' <span style="font-size:11px;color:#9CA3AF;font-weight:400">(черновик)</span>' : ''}</div>
+        <div class="card-desc">${displayDesc || '<span style="color:#9CA3AF;font-style:italic">Описание не добавлено</span>'}</div>
         <div class="card-badges">
           <span class="badge">${getCatLabel(r.category)}</span>
           ${r.country ? `<span class="badge country">🌍 ${r.country}</span>` : ''}
-          ${timeBadge}
-          ${diameterBadge}
+          ${timeBadge}${diameterBadge}
         </div>
         ${dateBadge}
         <div class="nut-row">
@@ -1176,6 +1259,15 @@ function renderRecipes() {
       </div>
     </div>`;
   }).join('');
+}
+
+function setDraftFilter(filter) {
+  draftFilter = filter;
+  ['all','published','drafts'].forEach(f => {
+    const el = document.getElementById('draft-pill-' + f);
+    if (el) el.classList.toggle('active', f === filter);
+  });
+  renderRecipes();
 }
 
 function searchByIngredient() {
@@ -1335,7 +1427,8 @@ function openEditModal(id) {
   const r = recipes.find(x => x.id === id);
   if (!r) return;
   editingId = id;
-  document.getElementById('recipe-modal-title').textContent = T[lang].recipe.edit;
+  document.getElementById('recipe-modal-title').textContent =
+    r.isDraft ? '✏ Редактировать черновик' : T[lang].recipe.edit;
   renderCategorySelect();
   fillForm(r);
   openModal('recipe-modal');
@@ -1607,9 +1700,11 @@ function handlePhotoUrl(url) {
   prev.onerror = () => { prev.style.display = 'none'; };
 }
 
-function saveRecipeForm() {
+function saveRecipeForm(mode = 'publish') {
   const name = document.getElementById('f-name').value.trim();
-  if (!name) { alert('Please enter a recipe name'); return; }
+  // Drafts can be saved without a name (use placeholder)
+  if (!name && mode === 'publish') { alert('Please enter a recipe name'); return; }
+  const isDraft = (mode === 'draft');
 
   // Collect ingredients
   const ingRows = document.querySelectorAll('#f-ingredients .ing-row-grid');
@@ -1662,10 +1757,12 @@ function saveRecipeForm() {
   const cookingHours = parseInt(document.getElementById('f-hours').value) || 0;
   const cookingMinutes = parseInt(document.getElementById('f-minutes').value) || 0;
 
+  const effectiveName = name || '(Без названия)';
   const recipe = {
     id,
-    name: nameI18n[lang] || name,
-    nameI18n,
+    isDraft,
+    name: nameI18n[lang] || effectiveName,
+    nameI18n: isDraft && !name ? {ru:'(Без названия)',en:'(Untitled)',vi:'(Chưa đặt tên)'} : nameI18n,
     description: descI18n[lang] || document.getElementById('f-description').value,
     descI18n,
     story: storyI18n[lang] || document.getElementById('f-story').value,
@@ -1677,7 +1774,7 @@ function saveRecipeForm() {
     servings: parseInt(document.getElementById('f-servings').value) || 2,
     cookingHours,
     cookingMinutes,
-    time: cookingHours * 60 + cookingMinutes, // keep legacy field
+    time: cookingHours * 60 + cookingMinutes,
     cookingDate: document.getElementById('f-cook-date').value,
     diameter: category === 'desserts' ? (parseInt(document.getElementById('f-diameter').value) || null) : null,
     photo: document.getElementById('f-photo-data').value,
@@ -1692,6 +1789,7 @@ function saveRecipeForm() {
     substitutes: existing?.substitutes || {},
     viewedAt: existing?.viewedAt || [],
     createdAt: existing?.createdAt || new Date().toISOString(),
+    draftSavedAt: isDraft ? new Date().toISOString() : (existing?.draftSavedAt || null),
   };
 
   if (existing) {
@@ -1701,6 +1799,18 @@ function saveRecipeForm() {
   }
   save();
   closeModal('recipe-modal');
+  // If saved as draft, switch to draft filter so user sees it
+  if (isDraft) {
+    draftFilter = 'drafts';
+    ['all','published','drafts'].forEach(f => {
+      const el = document.getElementById('draft-pill-' + f);
+      if (el) el.classList.toggle('active', f === 'drafts');
+    });
+    showToast('💾 Черновик сохранён — можно продолжить позже');
+  } else {
+    if (draftFilter === 'drafts') { draftFilter = 'all'; }
+    showToast('✅ Рецепт опубликован!');
+  }
   renderRecipes();
   // add country if new
   if (recipe.country && !countries.includes(recipe.country)) {
@@ -1881,6 +1991,17 @@ function saveCountry() {
 
 // ─── MODAL HELPERS ───────────────────────────────────────────────────────────
 function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+
+// ─── TOAST ───────────────────────────────────────────────────────────────────
+let _toastTimer = null;
+function showToast(msg, duration = 3000) {
+  const el = document.getElementById('app-toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), duration);
+}
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 function closeModalOnBg(e, id) { if (e.target === e.currentTarget) closeModal(id); }
 
@@ -2162,5 +2283,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (window.showSyncStatus) window.showSyncStatus('offline');
 });
 </script>
+<div class="toast" id="app-toast"></div>
 </body>
 </html>
