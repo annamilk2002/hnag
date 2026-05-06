@@ -70,6 +70,7 @@
       const userInfo  = document.getElementById('user-info');
 
       if (user) {
+        window._isGuest = false;
         loginBtn.style.display  = 'none';
         logoutBtn.style.display = 'inline-flex';
         userInfo.style.display  = 'flex';
@@ -94,8 +95,9 @@
         userInfo.style.display  = 'none';
         userInfo.innerHTML = '';
         showSyncStatus('offline');
-        // Reset to empty state when logged out
-        if (typeof window.resetAppData === 'function') window.resetAppData();
+        // Guest mode: keep SAMPLE recipes visible but mark as guest
+        window._isGuest = true;
+        if (typeof window.applyGuestMode === 'function') window.applyGuestMode();
       }
     });
 
@@ -509,6 +511,20 @@
     font-size: 28px; margin-bottom: 22px;
   }
 
+  /* ── GUEST MODE ── */
+  .guest-hidden { display: none !important; }
+  .guest-banner {
+    background: var(--warm-pale); border: 1px solid var(--warm-light);
+    border-radius: var(--radius-sm); padding: 10px 16px; margin-bottom: 20px;
+    font-size: 13px; color: var(--warm-dark); display: flex;
+    align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .guest-banner button {
+    width: auto; padding: 5px 14px; border-radius: 20px; background: var(--warm);
+    color: #fff; border: none; cursor: pointer; font-size: 12px; font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+  }
+
   /* ── EMPTY ── */
   .empty { text-align: center; padding: 60px 0; color: var(--text-muted); }
   .empty-icon { font-size: 52px; margin-bottom: 16px; }
@@ -559,9 +575,9 @@
   <div class="logo">🍜 Recipe Book</div>
   <nav class="header-nav" id="main-nav">
     <button class="nav-btn active" onclick="showTab('recipes')" data-tab="recipes" id="nav-recipes">Recipes</button>
-    <button class="nav-btn" onclick="showTab('mealplan')" data-tab="mealplan" id="nav-mealplan">Meal Plan</button>
-    <button class="nav-btn" onclick="showTab('analytics')" data-tab="analytics" id="nav-analytics">Analytics</button>
-    <button class="nav-btn" onclick="showTab('profile')" data-tab="profile" id="nav-profile">Profile</button>
+    <button class="nav-btn guest-hidden" onclick="showTab('mealplan')" data-tab="mealplan" id="nav-mealplan">Meal Plan</button>
+    <button class="nav-btn guest-hidden" onclick="showTab('analytics')" data-tab="analytics" id="nav-analytics">Analytics</button>
+    <button class="nav-btn guest-hidden" onclick="showTab('profile')" data-tab="profile" id="nav-profile">Profile</button>
   </nav>
   <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
     <div class="lang-switcher">
@@ -594,9 +610,15 @@
     <h1 class="hero-title">Hôm nay ăn gì nhỉ?</h1>
     <p class="hero-sub" id="hero-sub">Your personal recipe manager</p>
 
+    <!-- Guest banner (shown only to unauthenticated users) -->
+    <div class="guest-banner hidden" id="guest-banner">
+      👀 Вы просматриваете рецепты как гость. Войдите, чтобы добавлять, редактировать и планировать питание.
+      <button onclick="loginWithGoogle()">Войти через Google</button>
+    </div>
+
     <div class="search-row">
       <input type="text" id="search-input" placeholder="Search recipes..." oninput="renderRecipes()"/>
-      <button class="btn btn-primary" onclick="openAddModal()">+ <span data-i="recipe.add">Add Recipe</span></button>
+      <button class="btn btn-primary guest-hidden" id="btn-add-recipe" onclick="openAddModal()">+ <span data-i="recipe.add">Add Recipe</span></button>
     </div>
 
     <div class="ing-row">
@@ -935,28 +957,58 @@ let countries = window._countries;
 
 // Sync window refs -> local vars after Firestore load
 window.applyFirestoreData = () => {
+  window._isGuest = false;
   // Only replace if Firestore returned actual data (not empty)
   if (window._recipes?.length)   recipes   = window._recipes;
   if (window._mealPlan)          mealPlan  = window._mealPlan;
   if (window._profile?.name)     profile   = window._profile;
   if (window._countries?.length) countries = window._countries;
   if (window._categories?.length) categories = window._categories;
+  // Show all nav tabs and hide guest UI
+  applyAuthUI(false);
   renderCategoryPills();
   renderCountryPills();
   renderRecipes();
   initMealPlanDate();
 };
 
-// Reset when logged out
+// Apply guest mode UI (recipes visible, everything else hidden)
+window.applyGuestMode = () => {
+  window._isGuest = true;
+  applyAuthUI(true);
+  renderCategoryPills();
+  renderCountryPills();
+  renderRecipes();
+};
+
+// Show/hide UI elements based on guest status
+function applyAuthUI(isGuest) {
+  // Nav tabs: hide Meal Plan / Analytics / Profile for guests
+  document.querySelectorAll('.guest-hidden').forEach(el => {
+    el.style.display = isGuest ? 'none' : '';
+  });
+  // Guest banner in recipes tab
+  const banner = document.getElementById('guest-banner');
+  if (banner) banner.classList.toggle('hidden', !isGuest);
+  // If guest tried to go to a protected tab, redirect to recipes
+  if (isGuest && ['mealplan','analytics','profile'].includes(currentTab)) {
+    showTab('recipes');
+  }
+}
+
+// Reset when logged out — guest mode keeps SAMPLE recipes visible
 window.resetAppData = () => {
   recipes    = window._recipes    = [...SAMPLE];
   mealPlan   = window._mealPlan   = [];
   profile    = window._profile    = {name:'My Kitchen', calorieGoal:2000, notes:''};
   countries  = window._countries  = [...DEFAULT_COUNTRIES];
   categories = window._categories = [...DEFAULT_CATS];
-  renderCategoryPills();
-  renderCountryPills();
-  renderRecipes();
+  if (typeof window.applyGuestMode === 'function') window.applyGuestMode();
+  else {
+    renderCategoryPills();
+    renderCountryPills();
+    renderRecipes();
+  }
 };
 
 async function save() {
@@ -1013,6 +1065,11 @@ function setLang(l) {
 
 // ─── TAB NAVIGATION ───────────────────────────────────────────────────────────
 function showTab(tab) {
+  // Block guests from protected tabs
+  if (window._isGuest && ['mealplan','analytics','profile'].includes(tab)) {
+    alert('Войдите в аккаунт, чтобы получить доступ к этому разделу.');
+    return;
+  }
   currentTab = tab;
   ['recipes','mealplan','analytics','profile'].forEach(k => {
     document.getElementById('tab-'+k).classList.toggle('hidden', k !== tab);
@@ -1131,7 +1188,7 @@ function renderRecipes() {
     return `<div class="recipe-card" onclick="openDetail('${r.id}')">
       <div class="card-photo" style="${bg}">
         ${emoji ? `<span style="font-size:42px">${emoji}</span>` : ''}
-        <div class="card-actions">
+        <div class="card-actions" ${window._isGuest ? 'style="display:none!important"' : ''}>
           <button class="card-action-btn edit" onclick="event.stopPropagation();openEditModal('${r.id}')">✏</button>
           <button class="card-action-btn del" onclick="event.stopPropagation();deleteRecipe('${r.id}')">✕</button>
         </div>
@@ -1274,7 +1331,7 @@ function buildDetailHTML(r, scaledServings) {
     ${displayNotes ? `<p style="font-size:13px;color:var(--text-muted);font-style:italic;margin-bottom:16px">📝 ${displayNotes}</p>` : ''}
     <div class="flex-end">
       <button class="btn btn-secondary" onclick="closeModal('detail-modal')">${T[lang].recipe.cancel}</button>
-      <button class="btn btn-primary" onclick="closeModal('detail-modal');openEditModal('${r.id}')">✏ ${T[lang].recipe.edit}</button>
+      ${window._isGuest ? '' : `<button class="btn btn-primary" onclick="closeModal('detail-modal');openEditModal('${r.id}')">✏ ${T[lang].recipe.edit}</button>`}
     </div>`;
 }
 
@@ -1294,6 +1351,7 @@ function renderCategorySelect() {
 }
 
 function openAddModal() {
+  if (window._isGuest) { alert('Войдите в аккаунт, чтобы добавлять рецепты.'); return; }
   editingId = null;
   document.getElementById('recipe-modal-title').textContent = T[lang].recipe.add;
   clearForm();
@@ -1302,6 +1360,7 @@ function openAddModal() {
 }
 
 function openEditModal(id) {
+  if (window._isGuest) { alert('Войдите в аккаунт, чтобы редактировать рецепты.'); return; }
   const r = recipes.find(x => x.id === id);
   if (!r) return;
   editingId = id;
@@ -1543,6 +1602,7 @@ function saveRecipeForm() {
 }
 
 function deleteRecipe(id) {
+  if (window._isGuest) { alert('Войдите в аккаунт, чтобы удалять рецепты.'); return; }
   if (!confirm('Delete this recipe?')) return;
   recipes = recipes.filter(r => r.id !== id);
   save();
@@ -1755,13 +1815,23 @@ async function autoTranslateForm() {
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
         messages: [{ role: 'user', content: prompt }]
       })
     });
+
+    if (!resp.ok) {
+      const errData = await resp.json().catch(() => ({}));
+      throw new Error(errData?.error?.message || `HTTP ${resp.status}`);
+    }
+
     const data = await resp.json();
     const text = data.content?.map(b => b.text||'').join('').trim();
     const clean = text.replace(/```json|```/g,'').trim();
@@ -1781,6 +1851,7 @@ async function autoTranslateForm() {
   } catch(e) {
     statusEl.textContent = '❌ Ошибка перевода: ' + e.message;
     statusEl.style.color = 'var(--danger)';
+    console.error('Translation error:', e);
   } finally {
     btn.disabled = false;
     btn.innerHTML = '🌐 <span>Перевести на все языки</span>';
@@ -1985,9 +2056,12 @@ function editCategory(id) {
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  // Start in guest mode until Firebase auth resolves
+  window._isGuest = true;
   renderCategoryPills();
   renderCountryPills();
   renderRecipes();
+  applyAuthUI(true); // hide protected UI until login confirmed
   initMealPlanDate();
   document.getElementById('mp-date').value = new Date().toISOString().slice(0,10);
   // Show offline status until auth resolves
