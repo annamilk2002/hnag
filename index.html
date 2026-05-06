@@ -70,6 +70,7 @@
       const userInfo  = document.getElementById('user-info');
 
       if (user) {
+        window._isGuest = false;
         loginBtn.style.display  = 'none';
         logoutBtn.style.display = 'inline-flex';
         userInfo.style.display  = 'flex';
@@ -94,8 +95,9 @@
         userInfo.style.display  = 'none';
         userInfo.innerHTML = '';
         showSyncStatus('offline');
-        // Reset to empty state when logged out
-        if (typeof window.resetAppData === 'function') window.resetAppData();
+        // Guest mode: keep SAMPLE recipes visible but mark as guest
+        window._isGuest = true;
+        if (typeof window.applyGuestMode === 'function') window.applyGuestMode();
       }
     });
 
@@ -401,33 +403,12 @@
   }
 
   /* ── STEP ROW ── */
-  .step-row {
-    border: 1px solid var(--border); border-radius: var(--radius-sm);
-    padding: 12px 14px; margin-bottom: 12px; background: var(--beige-card);
-  }
-  .step-row-header { display: flex; gap: 10px; align-items: flex-start; }
+  .step-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
   .step-num {
     width: 28px; height: 28px; border-radius: 50%; background: var(--warm);
     color: #fff; display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700; flex-shrink: 0; margin-top: 6px;
+    font-size: 12px; font-weight: 700; flex-shrink: 0; margin-top: 8px;
   }
-  .step-media-toggle { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-  .step-media-btn {
-    padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;
-    cursor: pointer; border: 1px dashed var(--border); background: transparent;
-    color: var(--text-muted); transition: all .2s; font-family: 'DM Sans', sans-serif;
-  }
-  .step-media-btn:hover { border-color: var(--warm); color: var(--warm); }
-  .step-media-section { margin-top: 8px; padding: 10px; background: var(--beige-deep); border-radius: var(--radius-sm); }
-  .step-img-preview { max-height: 120px; border-radius: 8px; object-fit: cover; margin-top: 6px; display: none; }
-  /* Detail view steps */
-  .step-detail-card {
-    border: 1px solid var(--border); border-radius: var(--radius-sm);
-    padding: 14px; margin-bottom: 14px; background: var(--beige-card);
-  }
-  .step-detail-header { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 8px; }
-  .step-detail-img { width: 100%; max-height: 220px; object-fit: cover; border-radius: 8px; margin-top: 8px; }
-  .step-detail-video { width: 100%; aspect-ratio: 16/9; border-radius: 8px; border: none; margin-top: 8px; }
 
   /* ── DETAIL MODAL ── */
   .detail-photo {
@@ -530,6 +511,20 @@
     font-size: 28px; margin-bottom: 22px;
   }
 
+  /* ── GUEST MODE ── */
+  .guest-hidden { display: none !important; }
+  .guest-banner {
+    background: var(--warm-pale); border: 1px solid var(--warm-light);
+    border-radius: var(--radius-sm); padding: 10px 16px; margin-bottom: 20px;
+    font-size: 13px; color: var(--warm-dark); display: flex;
+    align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .guest-banner button {
+    width: auto; padding: 5px 14px; border-radius: 20px; background: var(--warm);
+    color: #fff; border: none; cursor: pointer; font-size: 12px; font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+  }
+
   /* ── EMPTY ── */
   .empty { text-align: center; padding: 60px 0; color: var(--text-muted); }
   .empty-icon { font-size: 52px; margin-bottom: 16px; }
@@ -580,9 +575,9 @@
   <div class="logo">🍜 Recipe Book</div>
   <nav class="header-nav" id="main-nav">
     <button class="nav-btn active" onclick="showTab('recipes')" data-tab="recipes" id="nav-recipes">Recipes</button>
-    <button class="nav-btn" onclick="showTab('mealplan')" data-tab="mealplan" id="nav-mealplan">Meal Plan</button>
-    <button class="nav-btn" onclick="showTab('analytics')" data-tab="analytics" id="nav-analytics">Analytics</button>
-    <button class="nav-btn" onclick="showTab('profile')" data-tab="profile" id="nav-profile">Profile</button>
+    <button class="nav-btn guest-hidden" onclick="showTab('mealplan')" data-tab="mealplan" id="nav-mealplan">Meal Plan</button>
+    <button class="nav-btn guest-hidden" onclick="showTab('analytics')" data-tab="analytics" id="nav-analytics">Analytics</button>
+    <button class="nav-btn guest-hidden" onclick="showTab('profile')" data-tab="profile" id="nav-profile">Profile</button>
   </nav>
   <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
     <div class="lang-switcher">
@@ -615,9 +610,15 @@
     <h1 class="hero-title">Hôm nay ăn gì nhỉ?</h1>
     <p class="hero-sub" id="hero-sub">Your personal recipe manager</p>
 
+    <!-- Guest banner (shown only to unauthenticated users) -->
+    <div class="guest-banner hidden" id="guest-banner">
+      👀 Вы просматриваете рецепты как гость. Войдите, чтобы добавлять, редактировать и планировать питание.
+      <button onclick="loginWithGoogle()">Войти через Google</button>
+    </div>
+
     <div class="search-row">
       <input type="text" id="search-input" placeholder="Search recipes..." oninput="renderRecipes()"/>
-      <button class="btn btn-primary" onclick="openAddModal()">+ <span data-i="recipe.add">Add Recipe</span></button>
+      <button class="btn btn-primary guest-hidden" id="btn-add-recipe" onclick="openAddModal()">+ <span data-i="recipe.add">Add Recipe</span></button>
     </div>
 
     <div class="ing-row">
@@ -956,28 +957,58 @@ let countries = window._countries;
 
 // Sync window refs -> local vars after Firestore load
 window.applyFirestoreData = () => {
+  window._isGuest = false;
   // Only replace if Firestore returned actual data (not empty)
   if (window._recipes?.length)   recipes   = window._recipes;
   if (window._mealPlan)          mealPlan  = window._mealPlan;
   if (window._profile?.name)     profile   = window._profile;
   if (window._countries?.length) countries = window._countries;
   if (window._categories?.length) categories = window._categories;
+  // Show all nav tabs and hide guest UI
+  applyAuthUI(false);
   renderCategoryPills();
   renderCountryPills();
   renderRecipes();
   initMealPlanDate();
 };
 
-// Reset when logged out
+// Apply guest mode UI (recipes visible, everything else hidden)
+window.applyGuestMode = () => {
+  window._isGuest = true;
+  applyAuthUI(true);
+  renderCategoryPills();
+  renderCountryPills();
+  renderRecipes();
+};
+
+// Show/hide UI elements based on guest status
+function applyAuthUI(isGuest) {
+  // Nav tabs: hide Meal Plan / Analytics / Profile for guests
+  document.querySelectorAll('.guest-hidden').forEach(el => {
+    el.style.display = isGuest ? 'none' : '';
+  });
+  // Guest banner in recipes tab
+  const banner = document.getElementById('guest-banner');
+  if (banner) banner.classList.toggle('hidden', !isGuest);
+  // If guest tried to go to a protected tab, redirect to recipes
+  if (isGuest && ['mealplan','analytics','profile'].includes(currentTab)) {
+    showTab('recipes');
+  }
+}
+
+// Reset when logged out — guest mode keeps SAMPLE recipes visible
 window.resetAppData = () => {
   recipes    = window._recipes    = [...SAMPLE];
   mealPlan   = window._mealPlan   = [];
   profile    = window._profile    = {name:'My Kitchen', calorieGoal:2000, notes:''};
   countries  = window._countries  = [...DEFAULT_COUNTRIES];
   categories = window._categories = [...DEFAULT_CATS];
-  renderCategoryPills();
-  renderCountryPills();
-  renderRecipes();
+  if (typeof window.applyGuestMode === 'function') window.applyGuestMode();
+  else {
+    renderCategoryPills();
+    renderCountryPills();
+    renderRecipes();
+  }
 };
 
 async function save() {
@@ -1034,6 +1065,11 @@ function setLang(l) {
 
 // ─── TAB NAVIGATION ───────────────────────────────────────────────────────────
 function showTab(tab) {
+  // Block guests from protected tabs
+  if (window._isGuest && ['mealplan','analytics','profile'].includes(tab)) {
+    alert('Войдите в аккаунт, чтобы получить доступ к этому разделу.');
+    return;
+  }
   currentTab = tab;
   ['recipes','mealplan','analytics','profile'].forEach(k => {
     document.getElementById('tab-'+k).classList.toggle('hidden', k !== tab);
@@ -1152,7 +1188,7 @@ function renderRecipes() {
     return `<div class="recipe-card" onclick="openDetail('${r.id}')">
       <div class="card-photo" style="${bg}">
         ${emoji ? `<span style="font-size:42px">${emoji}</span>` : ''}
-        <div class="card-actions">
+        <div class="card-actions" ${window._isGuest ? 'style="display:none!important"' : ''}>
           <button class="card-action-btn edit" onclick="event.stopPropagation();openEditModal('${r.id}')">✏</button>
           <button class="card-action-btn del" onclick="event.stopPropagation();deleteRecipe('${r.id}')">✕</button>
         </div>
@@ -1229,20 +1265,11 @@ function buildDetailHTML(r, scaledServings) {
     </div>`;
   }).join('');
 
-  const steps = (r.steps||[]).map((s,i) => {
-    const text  = typeof s === 'string' ? s : (s.text || '');
-    const photo = typeof s === 'object' ? (s.photo || '') : '';
-    const video = typeof s === 'object' ? (s.video || '') : '';
-    const photoHTML = photo ? `<img src="${photo}" class="step-detail-img" onerror="this.style.display='none'" alt="Step ${i+1}"/>` : '';
-    const videoHTML = video ? buildVideoEmbed(video) : '';
-    return `<div class="step-detail-card">
-      <div class="step-detail-header">
-        <div class="step-num">${i+1}</div>
-        <p style="margin-top:4px;line-height:1.6;font-size:14px">${text}</p>
-      </div>
-      ${photoHTML}${videoHTML}
-    </div>`;
-  }).join('');
+  const steps = (r.steps||[]).map((s,i) => `
+    <div class="step-row">
+      <div class="step-num">${i+1}</div>
+      <p style="margin-top:4px;line-height:1.6;font-size:14px">${s}</p>
+    </div>`).join('');
 
   // Time display
   let timeStr = '';
@@ -1304,7 +1331,7 @@ function buildDetailHTML(r, scaledServings) {
     ${displayNotes ? `<p style="font-size:13px;color:var(--text-muted);font-style:italic;margin-bottom:16px">📝 ${displayNotes}</p>` : ''}
     <div class="flex-end">
       <button class="btn btn-secondary" onclick="closeModal('detail-modal')">${T[lang].recipe.cancel}</button>
-      <button class="btn btn-primary" onclick="closeModal('detail-modal');openEditModal('${r.id}')">✏ ${T[lang].recipe.edit}</button>
+      ${window._isGuest ? '' : `<button class="btn btn-primary" onclick="closeModal('detail-modal');openEditModal('${r.id}')">✏ ${T[lang].recipe.edit}</button>`}
     </div>`;
 }
 
@@ -1324,6 +1351,7 @@ function renderCategorySelect() {
 }
 
 function openAddModal() {
+  if (window._isGuest) { alert('Войдите в аккаунт, чтобы добавлять рецепты.'); return; }
   editingId = null;
   document.getElementById('recipe-modal-title').textContent = T[lang].recipe.add;
   clearForm();
@@ -1332,6 +1360,7 @@ function openAddModal() {
 }
 
 function openEditModal(id) {
+  if (window._isGuest) { alert('Войдите в аккаунт, чтобы редактировать рецепты.'); return; }
   const r = recipes.find(x => x.id === id);
   if (!r) return;
   editingId = id;
@@ -1438,149 +1467,20 @@ function addIngredientRow(ing = null) {
 }
 
 let stepCount = 0;
-
-// step can be: string (legacy) or object {text, photo, photoFile, video}
-function addStepRow(step = '') {
+function addStepRow(text = '') {
   stepCount++;
-  const sid = 'step-' + stepCount;
   const idx = document.getElementById('f-steps').children.length + 1;
-  const text = typeof step === 'string' ? step : (step.text || '');
-  const photo = typeof step === 'object' ? (step.photo || '') : '';
-  const video = typeof step === 'object' ? (step.video || '') : '';
-
   const row = document.createElement('div');
   row.className = 'step-row';
-  row.dataset.sid = sid;
-
   row.innerHTML = `
-    <div class="step-row-header">
-      <div class="step-num">${idx}</div>
-      <input type="text" class="step-text-input" value="${text.replace(/"/g,'&quot;')}" placeholder="Шаг ${idx}" style="flex:1"/>
-      <button class="btn btn-danger btn-icon" style="flex-shrink:0" onclick="this.closest('.step-row').remove();renumberSteps()">✕</button>
-    </div>
-    <div class="step-media-toggle">
-      <button type="button" class="step-media-btn" onclick="toggleStepMedia(this,'photo-upload')">📷 Загрузить фото</button>
-      <button type="button" class="step-media-btn" onclick="toggleStepMedia(this,'photo-url')">🔗 Ссылка на фото</button>
-      <button type="button" class="step-media-btn" onclick="toggleStepMedia(this,'video-url')">🎬 Видео (YouTube)</button>
-    </div>
-    <!-- Photo upload -->
-    <div class="step-media-section hidden" data-media="photo-upload">
-      <label style="margin-bottom:6px;font-size:11px;font-weight:600;color:var(--text-muted)">ЗАГРУЗИТЬ ФОТО</label>
-      <input type="file" accept="image/*" style="font-size:12px" onchange="handleStepPhotoUpload(this)"/>
-      <img class="step-img-preview" src="${photo && !photo.startsWith('http') ? photo : ''}" style="${photo && !photo.startsWith('http') ? 'display:block' : 'display:none'}"/>
-      <input type="hidden" class="step-photo-data" value="${photo && !photo.startsWith('http') ? photo : ''}"/>
-    </div>
-    <!-- Photo URL -->
-    <div class="step-media-section hidden" data-media="photo-url">
-      <label style="margin-bottom:6px;font-size:11px;font-weight:600;color:var(--text-muted)">ССЫЛКА НА ФОТО</label>
-      <div style="display:flex;gap:8px">
-        <input type="text" class="step-photo-url" placeholder="https://..." value="${photo && photo.startsWith('http') ? photo : ''}" style="flex:1;font-size:13px"/>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="previewStepPhotoUrl(this)">Показать</button>
-      </div>
-      <img class="step-img-preview-url" src="${photo && photo.startsWith('http') ? photo : ''}" style="${photo && photo.startsWith('http') ? 'display:block;max-height:100px;border-radius:6px;margin-top:6px' : 'display:none;max-height:100px;border-radius:6px;margin-top:6px'}"/>
-    </div>
-    <!-- Video URL -->
-    <div class="step-media-section hidden" data-media="video-url">
-      <label style="margin-bottom:6px;font-size:11px;font-weight:600;color:var(--text-muted)">ССЫЛКА НА ВИДЕО</label>
-      <div style="display:flex;gap:8px">
-        <input type="text" class="step-video-url" placeholder="https://youtube.com/watch?v=..." value="${video}" style="flex:1;font-size:13px"/>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="previewStepVideo(this)">Показать</button>
-      </div>
-      <div class="step-video-preview" style="margin-top:8px;${video ? '' : 'display:none'}">
-        ${video ? buildVideoEmbed(video) : ''}
-      </div>
-    </div>`;
-
+    <div class="step-num">${idx}</div>
+    <input type="text" value="${text}" placeholder="Step ${idx}" style="flex:1"/>
+    <button class="btn btn-danger btn-icon" onclick="this.parentElement.remove();renumberSteps()">✕</button>`;
   document.getElementById('f-steps').appendChild(row);
-
-  // If editing existing step with photo URL, show the photo-url section
-  if (photo && photo.startsWith('http')) {
-    const urlSection = row.querySelector('[data-media="photo-url"]');
-    if (urlSection) urlSection.classList.remove('hidden');
-  } else if (photo) {
-    const uploadSection = row.querySelector('[data-media="photo-upload"]');
-    if (uploadSection) uploadSection.classList.remove('hidden');
-  }
-  if (video) {
-    const videoSection = row.querySelector('[data-media="video-url"]');
-    if (videoSection) videoSection.classList.remove('hidden');
-  }
-}
-
-function toggleStepMedia(btn, type) {
-  const row = btn.closest('.step-row');
-  const section = row.querySelector(`[data-media="${type}"]`);
-  if (!section) return;
-  const isHidden = section.classList.contains('hidden');
-  // toggle only this section (others stay as-is)
-  section.classList.toggle('hidden', !isHidden);
-}
-
-function handleStepPhotoUpload(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const row = input.closest('.step-row');
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const data = ev.target.result;
-    row.querySelector('.step-photo-data').value = data;
-    const prev = row.querySelector('.step-img-preview');
-    prev.src = data;
-    prev.style.display = 'block';
-    prev.style.maxHeight = '120px';
-    prev.style.borderRadius = '8px';
-    prev.style.marginTop = '6px';
-  };
-  reader.readAsDataURL(file);
-}
-
-function previewStepPhotoUrl(btn) {
-  const row = btn.closest('.step-row');
-  const url = row.querySelector('.step-photo-url').value.trim();
-  if (!url) return;
-  const prev = row.querySelector('.step-img-preview-url');
-  prev.src = url;
-  prev.style.display = 'block';
-  prev.onerror = () => { prev.style.display = 'none'; alert('Не удалось загрузить изображение по ссылке'); };
-}
-
-function previewStepVideo(btn) {
-  const row = btn.closest('.step-row');
-  const url = row.querySelector('.step-video-url').value.trim();
-  if (!url) return;
-  const preview = row.querySelector('.step-video-preview');
-  const embed = buildVideoEmbed(url);
-  if (embed) {
-    preview.innerHTML = embed;
-    preview.style.display = 'block';
-  } else {
-    alert('Введите корректную ссылку YouTube или Vimeo');
-  }
-}
-
-function buildVideoEmbed(url) {
-  if (!url) return '';
-  // YouTube
-  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
-  if (ytMatch) {
-    return `<iframe src="https://www.youtube.com/embed/${ytMatch[1]}" style="width:100%;aspect-ratio:16/9;border-radius:8px;border:none" allowfullscreen></iframe>`;
-  }
-  // Vimeo
-  const vmMatch = url.match(/vimeo\.com\/(\d+)/);
-  if (vmMatch) {
-    return `<iframe src="https://player.vimeo.com/video/${vmMatch[1]}" style="width:100%;aspect-ratio:16/9;border-radius:8px;border:none" allowfullscreen></iframe>`;
-  }
-  // Generic video link
-  return `<a href="${url}" target="_blank" style="font-size:13px;color:var(--warm)">▶ Открыть видео</a>`;
 }
 
 function renumberSteps() {
-  document.querySelectorAll('#f-steps .step-row').forEach((row, i) => {
-    const num = row.querySelector('.step-num');
-    if (num) num.textContent = i + 1;
-    const input = row.querySelector('.step-text-input');
-    if (input && !input.value) input.placeholder = `Шаг ${i + 1}`;
-  });
+  document.querySelectorAll('#f-steps .step-num').forEach((el, i) => el.textContent = i + 1);
 }
 
 function handlePhotoUpload(e) {
@@ -1620,18 +1520,9 @@ function saveRecipeForm() {
     unit: row.querySelector('.ing-unit-input').value || 'г',
   })).filter(i => i.name);
 
-  // Collect steps (rich: text + photo + video)
-  const stepRows = document.querySelectorAll('#f-steps .step-row');
-  const steps = Array.from(stepRows).map(row => {
-    const text = (row.querySelector('.step-text-input')?.value || '').trim();
-    if (!text) return null;
-    // Photo: prefer file upload, fallback to URL
-    const photoData = row.querySelector('.step-photo-data')?.value || '';
-    const photoUrl  = row.querySelector('.step-photo-url')?.value.trim() || '';
-    const photo = photoData || photoUrl || '';
-    const video = row.querySelector('.step-video-url')?.value.trim() || '';
-    return { text, photo, video };
-  }).filter(Boolean);
+  // Collect steps
+  const steps = Array.from(document.querySelectorAll('#f-steps input[type=text]'))
+    .map(i => i.value.trim()).filter(Boolean);
 
   const id = document.getElementById('f-id').value || ('r' + Date.now());
   const existing = recipes.find(r => r.id === id);
@@ -1711,6 +1602,7 @@ function saveRecipeForm() {
 }
 
 function deleteRecipe(id) {
+  if (window._isGuest) { alert('Войдите в аккаунт, чтобы удалять рецепты.'); return; }
   if (!confirm('Delete this recipe?')) return;
   recipes = recipes.filter(r => r.id !== id);
   save();
@@ -1923,13 +1815,23 @@ async function autoTranslateForm() {
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
         messages: [{ role: 'user', content: prompt }]
       })
     });
+
+    if (!resp.ok) {
+      const errData = await resp.json().catch(() => ({}));
+      throw new Error(errData?.error?.message || `HTTP ${resp.status}`);
+    }
+
     const data = await resp.json();
     const text = data.content?.map(b => b.text||'').join('').trim();
     const clean = text.replace(/```json|```/g,'').trim();
@@ -1949,6 +1851,7 @@ async function autoTranslateForm() {
   } catch(e) {
     statusEl.textContent = '❌ Ошибка перевода: ' + e.message;
     statusEl.style.color = 'var(--danger)';
+    console.error('Translation error:', e);
   } finally {
     btn.disabled = false;
     btn.innerHTML = '🌐 <span>Перевести на все языки</span>';
@@ -2153,9 +2056,12 @@ function editCategory(id) {
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  // Start in guest mode until Firebase auth resolves
+  window._isGuest = true;
   renderCategoryPills();
   renderCountryPills();
   renderRecipes();
+  applyAuthUI(true); // hide protected UI until login confirmed
   initMealPlanDate();
   document.getElementById('mp-date').value = new Date().toISOString().slice(0,10);
   // Show offline status until auth resolves
