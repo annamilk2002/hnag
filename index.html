@@ -79,10 +79,11 @@
         showSyncStatus('loading');
         const data = await window.firestoreLoad(user.uid);
         if (data) {
-          window._recipes    = data.recipes;
-          window._mealPlan   = data.mealPlan;
-          window._profile    = data.profile;
-          window._countries  = data.countries.length ? data.countries : window._countries;
+          // Merge: keep SAMPLE visible until real data arrives
+          window._recipes    = data.recipes?.length   ? data.recipes    : window._recipes;
+          window._mealPlan   = data.mealPlan           ? data.mealPlan   : window._mealPlan;
+          window._profile    = data.profile?.name      ? data.profile    : window._profile;
+          window._countries  = data.countries?.length  ? data.countries  : window._countries;
           if (data.categories?.length) window._categories = data.categories;
           if (typeof window.applyFirestoreData === 'function') window.applyFirestoreData();
         }
@@ -731,12 +732,16 @@
     <!-- Photo -->
     <div class="mb16">
       <label data-i="recipe.photo">Photo</label>
-      <div style="display:flex;gap:12px;align-items:center">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
         <img id="f-photo-preview" src="" alt="" style="width:56px;height:56px;border-radius:8px;object-fit:cover;display:none"/>
         <label class="photo-label">
           📷 <span data-i="recipe.uploadPhoto">Upload Photo</span>
           <input type="file" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)"/>
         </label>
+        <span style="font-size:12px;color:var(--text-muted)">или</span>
+        <input type="text" id="f-photo-url" placeholder="🔗 Вставить ссылку на фото (https://...)"
+          style="flex:1;min-width:200px"
+          oninput="handlePhotoUrl(this.value)"/>
       </div>
     </div>
 
@@ -930,10 +935,11 @@ let countries = window._countries;
 
 // Sync window refs -> local vars after Firestore load
 window.applyFirestoreData = () => {
-  recipes   = window._recipes;
-  mealPlan  = window._mealPlan;
-  profile   = window._profile;
-  countries = window._countries;
+  // Only replace if Firestore returned actual data (not empty)
+  if (window._recipes?.length)   recipes   = window._recipes;
+  if (window._mealPlan)          mealPlan  = window._mealPlan;
+  if (window._profile?.name)     profile   = window._profile;
+  if (window._countries?.length) countries = window._countries;
   if (window._categories?.length) categories = window._categories;
   renderCategoryPills();
   renderCountryPills();
@@ -1324,6 +1330,8 @@ function clearForm() {
   document.getElementById('f-carbs').value = 0;
   document.getElementById('f-id').value = '';
   document.getElementById('f-photo-data').value = '';
+  const urlField = document.getElementById('f-photo-url');
+  if (urlField) urlField.value = '';
   document.getElementById('f-photo-preview').style.display = 'none';
   document.getElementById('f-ingredients').innerHTML = '';
   document.getElementById('f-steps').innerHTML = '';
@@ -1362,6 +1370,9 @@ function fillForm(r) {
     document.getElementById('f-diameter').value = r.diameter;
   }
   document.getElementById('f-photo-data').value = r.photo || '';
+  const urlField = document.getElementById('f-photo-url');
+  // If photo is a URL (not base64), restore it in the URL input
+  if (urlField) urlField.value = (r.photo && r.photo.startsWith('http')) ? r.photo : '';
   if (r.photo) {
     const prev = document.getElementById('f-photo-preview');
     prev.src = r.photo; prev.style.display = '';
@@ -1421,8 +1432,20 @@ function handlePhotoUpload(e) {
     document.getElementById('f-photo-data').value = ev.target.result;
     const prev = document.getElementById('f-photo-preview');
     prev.src = ev.target.result; prev.style.display = '';
+    // clear URL field if file chosen
+    const urlField = document.getElementById('f-photo-url');
+    if (urlField) urlField.value = '';
   };
   reader.readAsDataURL(file);
+}
+
+function handlePhotoUrl(url) {
+  if (!url || !url.startsWith('http')) return;
+  document.getElementById('f-photo-data').value = url;
+  const prev = document.getElementById('f-photo-preview');
+  prev.src = url;
+  prev.style.display = '';
+  prev.onerror = () => { prev.style.display = 'none'; };
 }
 
 function saveRecipeForm() {
