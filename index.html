@@ -401,12 +401,33 @@
   }
 
   /* ── STEP ROW ── */
-  .step-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
+  .step-row {
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 12px 14px; margin-bottom: 12px; background: var(--beige-card);
+  }
+  .step-row-header { display: flex; gap: 10px; align-items: flex-start; }
   .step-num {
     width: 28px; height: 28px; border-radius: 50%; background: var(--warm);
     color: #fff; display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700; flex-shrink: 0; margin-top: 8px;
+    font-size: 12px; font-weight: 700; flex-shrink: 0; margin-top: 6px;
   }
+  .step-media-toggle { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .step-media-btn {
+    padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;
+    cursor: pointer; border: 1px dashed var(--border); background: transparent;
+    color: var(--text-muted); transition: all .2s; font-family: 'DM Sans', sans-serif;
+  }
+  .step-media-btn:hover { border-color: var(--warm); color: var(--warm); }
+  .step-media-section { margin-top: 8px; padding: 10px; background: var(--beige-deep); border-radius: var(--radius-sm); }
+  .step-img-preview { max-height: 120px; border-radius: 8px; object-fit: cover; margin-top: 6px; display: none; }
+  /* Detail view steps */
+  .step-detail-card {
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 14px; margin-bottom: 14px; background: var(--beige-card);
+  }
+  .step-detail-header { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 8px; }
+  .step-detail-img { width: 100%; max-height: 220px; object-fit: cover; border-radius: 8px; margin-top: 8px; }
+  .step-detail-video { width: 100%; aspect-ratio: 16/9; border-radius: 8px; border: none; margin-top: 8px; }
 
   /* ── DETAIL MODAL ── */
   .detail-photo {
@@ -1208,11 +1229,20 @@ function buildDetailHTML(r, scaledServings) {
     </div>`;
   }).join('');
 
-  const steps = (r.steps||[]).map((s,i) => `
-    <div class="step-row">
-      <div class="step-num">${i+1}</div>
-      <p style="margin-top:4px;line-height:1.6;font-size:14px">${s}</p>
-    </div>`).join('');
+  const steps = (r.steps||[]).map((s,i) => {
+    const text  = typeof s === 'string' ? s : (s.text || '');
+    const photo = typeof s === 'object' ? (s.photo || '') : '';
+    const video = typeof s === 'object' ? (s.video || '') : '';
+    const photoHTML = photo ? `<img src="${photo}" class="step-detail-img" onerror="this.style.display='none'" alt="Step ${i+1}"/>` : '';
+    const videoHTML = video ? buildVideoEmbed(video) : '';
+    return `<div class="step-detail-card">
+      <div class="step-detail-header">
+        <div class="step-num">${i+1}</div>
+        <p style="margin-top:4px;line-height:1.6;font-size:14px">${text}</p>
+      </div>
+      ${photoHTML}${videoHTML}
+    </div>`;
+  }).join('');
 
   // Time display
   let timeStr = '';
@@ -1408,20 +1438,149 @@ function addIngredientRow(ing = null) {
 }
 
 let stepCount = 0;
-function addStepRow(text = '') {
+
+// step can be: string (legacy) or object {text, photo, photoFile, video}
+function addStepRow(step = '') {
   stepCount++;
+  const sid = 'step-' + stepCount;
   const idx = document.getElementById('f-steps').children.length + 1;
+  const text = typeof step === 'string' ? step : (step.text || '');
+  const photo = typeof step === 'object' ? (step.photo || '') : '';
+  const video = typeof step === 'object' ? (step.video || '') : '';
+
   const row = document.createElement('div');
   row.className = 'step-row';
+  row.dataset.sid = sid;
+
   row.innerHTML = `
-    <div class="step-num">${idx}</div>
-    <input type="text" value="${text}" placeholder="Step ${idx}" style="flex:1"/>
-    <button class="btn btn-danger btn-icon" onclick="this.parentElement.remove();renumberSteps()">✕</button>`;
+    <div class="step-row-header">
+      <div class="step-num">${idx}</div>
+      <input type="text" class="step-text-input" value="${text.replace(/"/g,'&quot;')}" placeholder="Шаг ${idx}" style="flex:1"/>
+      <button class="btn btn-danger btn-icon" style="flex-shrink:0" onclick="this.closest('.step-row').remove();renumberSteps()">✕</button>
+    </div>
+    <div class="step-media-toggle">
+      <button type="button" class="step-media-btn" onclick="toggleStepMedia(this,'photo-upload')">📷 Загрузить фото</button>
+      <button type="button" class="step-media-btn" onclick="toggleStepMedia(this,'photo-url')">🔗 Ссылка на фото</button>
+      <button type="button" class="step-media-btn" onclick="toggleStepMedia(this,'video-url')">🎬 Видео (YouTube)</button>
+    </div>
+    <!-- Photo upload -->
+    <div class="step-media-section hidden" data-media="photo-upload">
+      <label style="margin-bottom:6px;font-size:11px;font-weight:600;color:var(--text-muted)">ЗАГРУЗИТЬ ФОТО</label>
+      <input type="file" accept="image/*" style="font-size:12px" onchange="handleStepPhotoUpload(this)"/>
+      <img class="step-img-preview" src="${photo && !photo.startsWith('http') ? photo : ''}" style="${photo && !photo.startsWith('http') ? 'display:block' : 'display:none'}"/>
+      <input type="hidden" class="step-photo-data" value="${photo && !photo.startsWith('http') ? photo : ''}"/>
+    </div>
+    <!-- Photo URL -->
+    <div class="step-media-section hidden" data-media="photo-url">
+      <label style="margin-bottom:6px;font-size:11px;font-weight:600;color:var(--text-muted)">ССЫЛКА НА ФОТО</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" class="step-photo-url" placeholder="https://..." value="${photo && photo.startsWith('http') ? photo : ''}" style="flex:1;font-size:13px"/>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="previewStepPhotoUrl(this)">Показать</button>
+      </div>
+      <img class="step-img-preview-url" src="${photo && photo.startsWith('http') ? photo : ''}" style="${photo && photo.startsWith('http') ? 'display:block;max-height:100px;border-radius:6px;margin-top:6px' : 'display:none;max-height:100px;border-radius:6px;margin-top:6px'}"/>
+    </div>
+    <!-- Video URL -->
+    <div class="step-media-section hidden" data-media="video-url">
+      <label style="margin-bottom:6px;font-size:11px;font-weight:600;color:var(--text-muted)">ССЫЛКА НА ВИДЕО</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" class="step-video-url" placeholder="https://youtube.com/watch?v=..." value="${video}" style="flex:1;font-size:13px"/>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="previewStepVideo(this)">Показать</button>
+      </div>
+      <div class="step-video-preview" style="margin-top:8px;${video ? '' : 'display:none'}">
+        ${video ? buildVideoEmbed(video) : ''}
+      </div>
+    </div>`;
+
   document.getElementById('f-steps').appendChild(row);
+
+  // If editing existing step with photo URL, show the photo-url section
+  if (photo && photo.startsWith('http')) {
+    const urlSection = row.querySelector('[data-media="photo-url"]');
+    if (urlSection) urlSection.classList.remove('hidden');
+  } else if (photo) {
+    const uploadSection = row.querySelector('[data-media="photo-upload"]');
+    if (uploadSection) uploadSection.classList.remove('hidden');
+  }
+  if (video) {
+    const videoSection = row.querySelector('[data-media="video-url"]');
+    if (videoSection) videoSection.classList.remove('hidden');
+  }
+}
+
+function toggleStepMedia(btn, type) {
+  const row = btn.closest('.step-row');
+  const section = row.querySelector(`[data-media="${type}"]`);
+  if (!section) return;
+  const isHidden = section.classList.contains('hidden');
+  // toggle only this section (others stay as-is)
+  section.classList.toggle('hidden', !isHidden);
+}
+
+function handleStepPhotoUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const row = input.closest('.step-row');
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const data = ev.target.result;
+    row.querySelector('.step-photo-data').value = data;
+    const prev = row.querySelector('.step-img-preview');
+    prev.src = data;
+    prev.style.display = 'block';
+    prev.style.maxHeight = '120px';
+    prev.style.borderRadius = '8px';
+    prev.style.marginTop = '6px';
+  };
+  reader.readAsDataURL(file);
+}
+
+function previewStepPhotoUrl(btn) {
+  const row = btn.closest('.step-row');
+  const url = row.querySelector('.step-photo-url').value.trim();
+  if (!url) return;
+  const prev = row.querySelector('.step-img-preview-url');
+  prev.src = url;
+  prev.style.display = 'block';
+  prev.onerror = () => { prev.style.display = 'none'; alert('Не удалось загрузить изображение по ссылке'); };
+}
+
+function previewStepVideo(btn) {
+  const row = btn.closest('.step-row');
+  const url = row.querySelector('.step-video-url').value.trim();
+  if (!url) return;
+  const preview = row.querySelector('.step-video-preview');
+  const embed = buildVideoEmbed(url);
+  if (embed) {
+    preview.innerHTML = embed;
+    preview.style.display = 'block';
+  } else {
+    alert('Введите корректную ссылку YouTube или Vimeo');
+  }
+}
+
+function buildVideoEmbed(url) {
+  if (!url) return '';
+  // YouTube
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+  if (ytMatch) {
+    return `<iframe src="https://www.youtube.com/embed/${ytMatch[1]}" style="width:100%;aspect-ratio:16/9;border-radius:8px;border:none" allowfullscreen></iframe>`;
+  }
+  // Vimeo
+  const vmMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vmMatch) {
+    return `<iframe src="https://player.vimeo.com/video/${vmMatch[1]}" style="width:100%;aspect-ratio:16/9;border-radius:8px;border:none" allowfullscreen></iframe>`;
+  }
+  // Generic video link
+  return `<a href="${url}" target="_blank" style="font-size:13px;color:var(--warm)">▶ Открыть видео</a>`;
 }
 
 function renumberSteps() {
-  document.querySelectorAll('#f-steps .step-num').forEach((el, i) => el.textContent = i + 1);
+  document.querySelectorAll('#f-steps .step-row').forEach((row, i) => {
+    const num = row.querySelector('.step-num');
+    if (num) num.textContent = i + 1;
+    const input = row.querySelector('.step-text-input');
+    if (input && !input.value) input.placeholder = `Шаг ${i + 1}`;
+  });
 }
 
 function handlePhotoUpload(e) {
@@ -1461,9 +1620,18 @@ function saveRecipeForm() {
     unit: row.querySelector('.ing-unit-input').value || 'г',
   })).filter(i => i.name);
 
-  // Collect steps
-  const steps = Array.from(document.querySelectorAll('#f-steps input[type=text]'))
-    .map(i => i.value.trim()).filter(Boolean);
+  // Collect steps (rich: text + photo + video)
+  const stepRows = document.querySelectorAll('#f-steps .step-row');
+  const steps = Array.from(stepRows).map(row => {
+    const text = (row.querySelector('.step-text-input')?.value || '').trim();
+    if (!text) return null;
+    // Photo: prefer file upload, fallback to URL
+    const photoData = row.querySelector('.step-photo-data')?.value || '';
+    const photoUrl  = row.querySelector('.step-photo-url')?.value.trim() || '';
+    const photo = photoData || photoUrl || '';
+    const video = row.querySelector('.step-video-url')?.value.trim() || '';
+    return { text, photo, video };
+  }).filter(Boolean);
 
   const id = document.getElementById('f-id').value || ('r' + Date.now());
   const existing = recipes.find(r => r.id === id);
