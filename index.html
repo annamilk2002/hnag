@@ -12,7 +12,7 @@
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-analytics.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
       from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc, getDocs, collection, deleteDoc }
+    import { getFirestore, doc, setDoc, getDoc }
       from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -32,51 +32,18 @@
     const provider = new GoogleAuthProvider();
 
     // ── Firestore save/load ──────────────────────────────────────────────────
-    window.firestoreSave = async (changedRecipes) => {
+    window.firestoreSave = async () => {
       const user = auth.currentUser;
       if (!user) return;
       try {
-        // Lưu user data (mealPlan, profile, countries)
         await setDoc(doc(db, 'users', user.uid), {
-          mealPlan:  JSON.stringify(window._mealPlan  || []),
-          profile:   JSON.stringify(window._profile   || {}),
-          countries: JSON.stringify(window._countries || []),
+          recipes:    JSON.stringify(window._recipes    || []),
+          mealPlan:   JSON.stringify(window._mealPlan   || []),
+          profile:    JSON.stringify(window._profile    || {}),
+          countries:  JSON.stringify(window._countries  || []),
+          categories: JSON.stringify(window._categories || []),
         });
-        // Đẩy từng recipe lên collection public 'recipes'
-        const recipesToPush = changedRecipes || window._recipes || [];
-        for (const r of recipesToPush) {
-          await setDoc(doc(db, 'recipes', r.id), {
-            ...r,
-            ingredients: JSON.stringify(r.ingredients || []),
-            steps:       JSON.stringify(r.steps || []),
-            viewedAt:    JSON.stringify(r.viewedAt || []),
-            ownerId: user.uid,
-            ownerName: user.displayName || '',
-            ownerPhoto: user.photoURL || '',
-          });
-        }
       } catch(e) { console.error('Firestore save error:', e); }
-    };
-
-    window.firestoreDeleteRecipe = async (id) => {
-      try {
-        await deleteDoc(doc(db, 'recipes', id));
-      } catch(e) { console.error('Firestore delete error:', e); }
-    };
-
-    window.firestoreLoadPublicRecipes = async () => {
-      try {
-        const snap = await getDocs(collection(db, 'recipes'));
-        return snap.docs.map(d => {
-          const data = d.data();
-          return {
-            ...data,
-            ingredients: JSON.parse(data.ingredients || '[]'),
-            steps:       JSON.parse(data.steps || '[]'),
-            viewedAt:    JSON.parse(data.viewedAt || '[]'),
-          };
-        });
-      } catch(e) { console.error('Firestore load public error:', e); return []; }
     };
 
     window.firestoreLoad = async (uid) => {
@@ -85,9 +52,11 @@
         if (snap.exists()) {
           const d = snap.data();
           return {
-            mealPlan:  JSON.parse(d.mealPlan  || '[]'),
-            profile:   JSON.parse(d.profile   || '{}'),
-            countries: JSON.parse(d.countries || '[]'),
+            recipes:    JSON.parse(d.recipes    || '[]'),
+            mealPlan:   JSON.parse(d.mealPlan   || '[]'),
+            profile:    JSON.parse(d.profile    || '{}'),
+            countries:  JSON.parse(d.countries  || '[]'),
+            categories: JSON.parse(d.categories || '[]'),
           };
         }
       } catch(e) { console.error('Firestore load error:', e); }
@@ -101,7 +70,6 @@
       const userInfo  = document.getElementById('user-info');
 
       if (user) {
-        window._currentUser = user;
         loginBtn.style.display  = 'none';
         logoutBtn.style.display = 'inline-flex';
         userInfo.style.display  = 'flex';
@@ -109,41 +77,24 @@
 
         // Load data from Firestore
         showSyncStatus('loading');
-        // Load tất cả public recipes (của mọi người) + user data riêng
-        const [pubRecipes, userData] = await Promise.all([
-          window.firestoreLoadPublicRecipes(),
-          window.firestoreLoad(user.uid),
-        ]);
-        if (pubRecipes && pubRecipes.length) {
-          window._recipes = pubRecipes;
+        const data = await window.firestoreLoad(user.uid);
+        if (data) {
+          window._recipes    = data.recipes;
+          window._mealPlan   = data.mealPlan;
+          window._profile    = data.profile;
+          window._countries  = data.countries.length ? data.countries : window._countries;
+          if (data.categories?.length) window._categories = data.categories;
+          if (typeof window.applyFirestoreData === 'function') window.applyFirestoreData();
         }
-        if (userData) {
-          window._mealPlan  = userData.mealPlan;
-          window._profile   = userData.profile;
-          window._countries = userData.countries.length ? userData.countries : window._countries;
-        }
-        if (typeof window.applyFirestoreData === 'function') window.applyFirestoreData();
         showSyncStatus('synced');
       } else {
-        window._currentUser = null;
         loginBtn.style.display  = 'inline-flex';
         logoutBtn.style.display = 'none';
         userInfo.style.display  = 'none';
         userInfo.innerHTML = '';
-        showSyncStatus('loading');
-        // Load public recipes for guests
-        if (typeof window.firestoreLoadPublicRecipes === 'function') {
-          const pub = await window.firestoreLoadPublicRecipes();
-          if (pub && pub.length) {
-            window._recipes = pub;
-            if (typeof window.applyFirestoreData === 'function') window.applyFirestoreData();
-          } else if (typeof window.resetAppData === 'function') {
-            window.resetAppData();
-          }
-        } else if (typeof window.resetAppData === 'function') {
-          window.resetAppData();
-        }
-        showSyncStatus('guest');
+        showSyncStatus('offline');
+        // Reset to empty state when logged out
+        if (typeof window.resetAppData === 'function') window.resetAppData();
       }
     });
 
@@ -155,7 +106,6 @@
         synced:  { text: '✅ Đã đồng bộ', color: '#6B9E78' },
         saving:  { text: '💾 Đang lưu...', color: '#C8845A' },
         offline: { text: '🔒 Chưa đăng nhập', color: '#B8A898' },
-        guest:   { text: '👁 Xem công khai — đăng nhập để lưu', color: '#8C7B6B' },
         error:   { text: '❌ Lỗi đồng bộ',   color: '#C0504D' },
       };
       const s = map[state] || map.offline;
@@ -407,8 +357,46 @@
 
   /* ── INGREDIENT ROW ── */
   .ing-row-grid {
-    display: grid; grid-template-columns: 1fr 80px 64px 34px;
+    display: grid; grid-template-columns: 1fr 80px 110px 34px;
     gap: 8px; margin-bottom: 8px; align-items: center;
+  }
+
+  /* ── TRANSLATE BUTTON ── */
+  .translate-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: var(--radius-sm); border: 1px dashed var(--warm);
+    background: var(--warm-pale); color: var(--warm-dark); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all .2s; font-family: 'DM Sans', sans-serif;
+  }
+  .translate-btn:hover { background: var(--warm); color: #fff; }
+  .translate-btn:disabled { opacity: .5; cursor: default; }
+  .translate-spinner { display: inline-block; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── KBJU AUTO BADGE ── */
+  .kbju-auto-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; color: var(--success); font-weight: 600;
+    background: #EAF4EE; padding: 3px 8px; border-radius: 20px;
+  }
+
+  /* ── CATEGORY MANAGER ── */
+  .cat-manage-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 0; border-bottom: 1px solid var(--border);
+  }
+  .cat-manage-row:last-child { border-bottom: none; }
+  .cat-manage-name { font-size: 14px; color: var(--text); flex: 1; }
+  .cat-manage-actions { display: flex; gap: 6px; }
+
+  /* ── COOKING DATE BADGE ON CARD ── */
+  .card-date-badge {
+    font-size: 10px; color: var(--text-light);
+    margin-top: 4px;
+  }
+  .diameter-badge {
+    background: #F0E8F8; color: #7B5EA7; border-radius: 20px;
+    font-size: 11px; font-weight: 600; padding: 3px 10px;
   }
 
   /* ── STEP ROW ── */
@@ -557,7 +545,7 @@
     .header-nav { order: 3; width: 100%; }
     main { padding: 20px 14px; }
     .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
-    .ing-row-grid { grid-template-columns: 1fr 70px 50px 30px; }
+    .ing-row-grid { grid-template-columns: 1fr 70px 90px 30px; }
     .nut-summary { grid-template-columns: repeat(2,1fr); }
     .day-nut-bar { grid-template-columns: repeat(2,1fr); }
   }
@@ -693,34 +681,71 @@
     <div class="grid-2 mb16">
       <div><label data-i="recipe.name">Dish Name</label><input type="text" id="f-name"/></div>
       <div><label data-i="recipe.category">Category</label>
-        <select id="f-category"></select>
+        <select id="f-category" onchange="onCategoryChange()"></select>
       </div>
     </div>
     <div class="mb16"><label data-i="recipe.description">Description</label><input type="text" id="f-description"/></div>
     <div class="mb16"><label data-i="recipe.history">Recipe Story</label><textarea id="f-story" rows="3"></textarea></div>
 
+    <!-- Translate button -->
+    <div class="mb16" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <button class="translate-btn" id="translate-btn" onclick="autoTranslateForm()" type="button">
+        🌐 <span>Перевести на все языки</span>
+      </button>
+      <span id="translate-status" style="font-size:12px;color:var(--text-muted)"></span>
+    </div>
+
+    <!-- Hidden multilang fields -->
+    <input type="hidden" id="f-name-ru"/> <input type="hidden" id="f-name-vi"/> <input type="hidden" id="f-name-en"/>
+    <input type="hidden" id="f-desc-ru"/> <input type="hidden" id="f-desc-vi"/> <input type="hidden" id="f-desc-en"/>
+    <input type="hidden" id="f-story-ru"/> <input type="hidden" id="f-story-vi"/> <input type="hidden" id="f-story-en"/>
+    <input type="hidden" id="f-notes-ru"/> <input type="hidden" id="f-notes-vi"/> <input type="hidden" id="f-notes-en"/>
+
     <div class="grid-3 mb16">
-      <div><label data-i="recipe.servings">Servings</label><input type="number" id="f-servings" value="2" min="1"/></div>
-      <div><label data-i="recipe.time">Time (min)</label><input type="number" id="f-time" value="30" min="1"/></div>
+      <div><label data-i="recipe.servings">Порции / Servings</label><input type="number" id="f-servings" value="2" min="1"/></div>
+      <div><label>Дата приготовления</label><input type="date" id="f-cook-date"/></div>
       <div><label data-i="recipe.country">Country</label>
         <input type="text" id="f-country" list="country-datalist"/>
         <datalist id="country-datalist"></datalist>
       </div>
     </div>
 
+    <!-- Cooking time: hours + minutes -->
+    <div class="grid-2 mb16">
+      <div>
+        <label>⏱ Время приготовления</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="number" id="f-hours" value="0" min="0" max="72" style="width:80px" placeholder="ч"/>
+          <span style="color:var(--text-muted);font-size:13px">ч</span>
+          <input type="number" id="f-minutes" value="30" min="0" max="59" style="width:80px" placeholder="мин"/>
+          <span style="color:var(--text-muted);font-size:13px">мин</span>
+        </div>
+      </div>
+      <!-- Diameter — shown only for desserts -->
+      <div id="f-diameter-wrap" class="hidden">
+        <label>🎂 Диаметр формы (см)</label>
+        <input type="number" id="f-diameter" value="22" min="10" max="50"/>
+      </div>
+    </div>
+
     <!-- Photo -->
     <div class="mb16">
-      <label>🖼 URL Ảnh <span style="font-weight:400;color:var(--text-light)">(dán link từ imgur, cloudinary, v.v.)</span></label>
-      <div style="display:flex;gap:10px;align-items:center">
-        <input type="url" id="f-photo-data" placeholder="https://i.imgur.com/..." oninput="previewPhotoUrl(this.value)" style="flex:1"/>
-        <img id="f-photo-preview" src="" alt="" style="width:52px;height:52px;border-radius:8px;object-fit:cover;display:none;flex-shrink:0;border:1px solid var(--border)"/>
+      <label data-i="recipe.photo">Photo</label>
+      <div style="display:flex;gap:12px;align-items:center">
+        <img id="f-photo-preview" src="" alt="" style="width:56px;height:56px;border-radius:8px;object-fit:cover;display:none"/>
+        <label class="photo-label">
+          📷 <span data-i="recipe.uploadPhoto">Upload Photo</span>
+          <input type="file" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)"/>
+        </label>
       </div>
-      <p style="font-size:11px;color:var(--text-light);margin-top:5px">💡 Gợi ý: upload ảnh miễn phí tại <a href="https://imgur.com/upload" target="_blank" style="color:var(--warm)">imgur.com</a> rồi copy link</p>
     </div>
 
     <!-- Nutrition -->
     <div class="mb20">
-      <div class="section-title" data-i="recipe.nutrition">Nutrition</div>
+      <div class="section-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span data-i="recipe.nutrition">Nutrition</span>
+        <span id="kbju-auto-badge" class="kbju-auto-badge hidden">✨ Авто-расчёт</span>
+      </div>
       <div class="grid-4">
         <div><label data-i="recipe.calories">Calories</label><input type="number" id="f-cal" value="0"/></div>
         <div><label data-i="recipe.protein">Protein (g)</label><input type="number" id="f-protein" value="0"/></div>
@@ -732,6 +757,7 @@
     <!-- Ingredients -->
     <div class="mb20">
       <div class="section-title" data-i="recipe.ingredients">Ingredients</div>
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px">💡 КБЖУ рассчитывается автоматически при добавлении ингредиентов</p>
       <div id="f-ingredients"></div>
       <button class="btn btn-secondary btn-sm" onclick="addIngredientRow()">+ <span data-i="recipe.addIngredient">Add Ingredient</span></button>
     </div>
@@ -750,6 +776,7 @@
     </div>
 
     <input type="hidden" id="f-id"/>
+    <input type="hidden" id="f-photo-data"/>
     <div class="flex-end">
       <button class="btn btn-secondary" onclick="closeModal('recipe-modal')" data-i="recipe.cancel">Cancel</button>
       <button class="btn btn-primary" onclick="saveRecipeForm()" data-i="recipe.save">Save</button>
@@ -797,6 +824,32 @@
     <div class="flex-end">
       <button class="btn btn-secondary" onclick="closeModal('country-modal')" data-i="recipe.cancel">Cancel</button>
       <button class="btn btn-primary" onclick="saveCountry()" data-i="recipe.save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- CATEGORY MANAGER MODAL -->
+<div class="modal-overlay hidden" id="category-manager-modal" onclick="closeModalOnBg(event,'category-manager-modal')">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-header">
+      <div class="modal-title">⚙ Управление категориями</div>
+      <button class="btn btn-secondary btn-sm" onclick="closeModal('category-manager-modal')">✕</button>
+    </div>
+    <div class="mb16">
+      <div class="section-title">Существующие категории</div>
+      <div id="cat-manager-list"></div>
+    </div>
+    <div class="mb20">
+      <div class="section-title">Добавить новую</div>
+      <div class="grid-3 mb12">
+        <div><label>RU</label><input type="text" id="cat-new-ru" placeholder="Десерты"/></div>
+        <div><label>EN *</label><input type="text" id="cat-new-en" placeholder="Desserts"/></div>
+        <div><label>VI</label><input type="text" id="cat-new-vi" placeholder="Tráng miệng"/></div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="addCategory()">+ Добавить категорию</button>
+    </div>
+    <div class="flex-end">
+      <button class="btn btn-secondary" onclick="closeModal('category-manager-modal')">Закрыть</button>
     </div>
   </div>
 </div>
@@ -881,6 +934,7 @@ window.applyFirestoreData = () => {
   mealPlan  = window._mealPlan;
   profile   = window._profile;
   countries = window._countries;
+  if (window._categories?.length) categories = window._categories;
   renderCategoryPills();
   renderCountryPills();
   renderRecipes();
@@ -889,25 +943,27 @@ window.applyFirestoreData = () => {
 
 // Reset when logged out
 window.resetAppData = () => {
-  recipes   = window._recipes   = [...SAMPLE];
-  mealPlan  = window._mealPlan  = [];
-  profile   = window._profile   = {name:'My Kitchen', calorieGoal:2000, notes:''};
-  countries = window._countries = [...DEFAULT_COUNTRIES];
+  recipes    = window._recipes    = [...SAMPLE];
+  mealPlan   = window._mealPlan   = [];
+  profile    = window._profile    = {name:'My Kitchen', calorieGoal:2000, notes:''};
+  countries  = window._countries  = [...DEFAULT_COUNTRIES];
+  categories = window._categories = [...DEFAULT_CATS];
   renderCategoryPills();
   renderCountryPills();
   renderRecipes();
 };
 
-async function save(changedRecipes) {
+async function save() {
   // Keep window refs in sync
-  window._recipes   = recipes;
-  window._mealPlan  = mealPlan;
-  window._profile   = profile;
-  window._countries = countries;
+  window._recipes    = recipes;
+  window._mealPlan   = mealPlan;
+  window._profile    = profile;
+  window._countries  = countries;
+  window._categories = categories;
   // Save to Firestore if logged in
   if (typeof window.firestoreSave === 'function') {
     window.showSyncStatus && window.showSyncStatus('saving');
-    await window.firestoreSave(changedRecipes);
+    await window.firestoreSave();
     window.showSyncStatus && window.showSyncStatus('synced');
   }
 }
@@ -961,14 +1017,39 @@ function showTab(tab) {
   if (tab === 'profile') loadProfileForm();
 }
 
-// ─── CATEGORY PILLS ──────────────────────────────────────────────────────────
+// ─── CATEGORY SYSTEM (dynamic) ────────────────────────────────────────────────
+const DEFAULT_CATS = [
+  {id:'desserts',label:{ru:'Десерты',en:'Desserts',vi:'Tráng miệng'}},
+  {id:'asian',   label:{ru:'Азиатская',en:'Asian Cuisine',vi:'Châu Á'}},
+  {id:'european',label:{ru:'Европейская',en:'European',vi:'Châu Âu'}},
+  {id:'drinks',  label:{ru:'Напитки',en:'Drinks',vi:'Đồ uống'}},
+  {id:'hot',     label:{ru:'Горячие',en:'Hot',vi:'Nóng'}},
+  {id:'cold',    label:{ru:'Холодные',en:'Cold',vi:'Lạnh'}},
+  {id:'party',   label:{ru:'Вечеринка',en:'Party',vi:'Tiệc'}},
+  {id:'diet',    label:{ru:'Диетические',en:'Diet',vi:'Ăn kiêng'}},
+  {id:'vegetarian',label:{ru:'Вегетарианские',en:'Vegetarian',vi:'Chay'}},
+];
+
+window._categories = [...DEFAULT_CATS];
+let categories = window._categories;
+
+function getCatLabel(id) {
+  const c = categories.find(x => x.id === id);
+  if (c) return c.label[lang] || c.label.en || id;
+  return T[lang]?.categories?.[id] || id;
+}
+
 const CATS = ['all','desserts','asian','european','drinks','hot','cold','party','diet','vegetarian'];
 
 function renderCategoryPills() {
   const c = document.getElementById('cat-pills');
-  c.innerHTML = CATS.map(cat =>
-    `<span class="pill${selectedCat===cat?' active':''}" onclick="selectCat('${cat}')">${T[lang].categories[cat]}</span>`
+  const allLabel = T[lang].categories.all || 'All';
+  let html = `<span class="pill${selectedCat==='all'?' active':''}" onclick="selectCat('all')">${allLabel}</span>`;
+  html += categories.map(cat =>
+    `<span class="pill${selectedCat===cat.id?' active':''}" onclick="selectCat('${cat.id}')">${getCatLabel(cat.id)}</span>`
   ).join('');
+  html += `<span class="pill pill-dashed" onclick="openModal('category-manager-modal')" title="Управление категориями">⚙ Категории</span>`;
+  c.innerHTML = html;
 }
 
 function selectCat(cat) {
@@ -1025,23 +1106,40 @@ function renderRecipes() {
   grid.innerHTML = list.map(r => {
     const bg = r.photo ? `background-image:url(${r.photo})` : '';
     const emoji = !r.photo ? '🍽' : '';
+    // Show display name in current language
+    const displayName = r.nameI18n?.[lang] || r.name;
+    const displayDesc = r.descI18n?.[lang] || r.description;
+    // Time badge
+    let timeBadge = '';
+    if (r.cookingHours || r.cookingMinutes) {
+      const hPart = r.cookingHours ? `${r.cookingHours}ч ` : '';
+      const mPart = r.cookingMinutes ? `${r.cookingMinutes}м` : '';
+      timeBadge = `<span class="badge" style="background:#EAF3F0;color:#3A8A72">⏱ ${hPart}${mPart}</span>`;
+    } else if (r.time) {
+      timeBadge = `<span class="badge" style="background:#EAF3F0;color:#3A8A72">⏱ ${r.time}м</span>`;
+    }
+    const diameterBadge = r.category === 'desserts' && r.diameter
+      ? `<span class="badge diameter-badge">⌀${r.diameter}см</span>` : '';
+    const dateBadge = r.cookingDate
+      ? `<div class="card-date-badge">📅 ${r.cookingDate}</div>` : '';
     return `<div class="recipe-card" onclick="openDetail('${r.id}')">
       <div class="card-photo" style="${bg}">
         ${emoji ? `<span style="font-size:42px">${emoji}</span>` : ''}
-        ${canEdit(r) ? `<div class="card-actions">
+        <div class="card-actions">
           <button class="card-action-btn edit" onclick="event.stopPropagation();openEditModal('${r.id}')">✏</button>
           <button class="card-action-btn del" onclick="event.stopPropagation();deleteRecipe('${r.id}')">✕</button>
-        </div>` : ''}
+        </div>
       </div>
       <div class="card-body">
-        <div class="card-name">${r.name}</div>
-        <div class="card-desc">${r.description}</div>
+        <div class="card-name">${displayName}</div>
+        <div class="card-desc">${displayDesc}</div>
         <div class="card-badges">
-          <span class="badge">${T[lang].categories[r.category]||r.category}</span>
+          <span class="badge">${getCatLabel(r.category)}</span>
           ${r.country ? `<span class="badge country">🌍 ${r.country}</span>` : ''}
-          ${r.ownerName ? `<span class="badge" style="background:#EEE8FF;color:#6B5EB4" title="Đăng bởi ${r.ownerName}">👤 ${r.ownerName.split(' ').pop()}</span>` : ''}
-          ${r.time ? `<span class="badge" style="background:#EAF3F0;color:#3A8A72">⏱ ${r.time}m</span>` : ''}
+          ${timeBadge}
+          ${diameterBadge}
         </div>
+        ${dateBadge}
         <div class="nut-row">
           <div class="nut-cell"><div class="nut-val">${r.nutrition.calories}</div><div class="nut-lbl">kcal</div></div>
           <div class="nut-cell"><div class="nut-val">${r.nutrition.protein}g</div><div class="nut-lbl">P</div></div>
@@ -1088,6 +1186,12 @@ function buildDetailHTML(r, scaledServings) {
   };
   const bg = r.photo ? `background-image:url(${r.photo})` : '';
 
+  // Show name/desc/story in current language
+  const displayName = r.nameI18n?.[lang] || r.name;
+  const displayDesc = r.descI18n?.[lang] || r.description;
+  const displayStory = r.storyI18n?.[lang] || r.story;
+  const displayNotes = r.notesI18n?.[lang] || r.notes;
+
   const ings = r.ingredients.map(ing => {
     const sc = Math.round(ing.amount * ratio * 10) / 10;
     const sub = r.substitutes?.[ing.id];
@@ -1104,6 +1208,22 @@ function buildDetailHTML(r, scaledServings) {
       <p style="margin-top:4px;line-height:1.6;font-size:14px">${s}</p>
     </div>`).join('');
 
+  // Time display
+  let timeStr = '';
+  if (r.cookingHours || r.cookingMinutes) {
+    const hp = r.cookingHours ? `${r.cookingHours}ч ` : '';
+    const mp = r.cookingMinutes ? `${r.cookingMinutes}мин` : '';
+    timeStr = `⏱ ${hp}${mp}`;
+  } else if (r.time) {
+    timeStr = `⏱ ${r.time}м`;
+  }
+
+  const metaBadges = [
+    timeStr ? `<span class="badge" style="background:#EAF3F0;color:#3A8A72">${timeStr}</span>` : '',
+    r.cookingDate ? `<span class="badge" style="background:#E8F0FC;color:#3A5AA0">📅 ${r.cookingDate}</span>` : '',
+    r.diameter ? `<span class="badge diameter-badge">⌀${r.diameter}см</span>` : '',
+  ].filter(Boolean).join(' ');
+
   return `
     <div class="modal-header">
       <div></div>
@@ -1112,11 +1232,12 @@ function buildDetailHTML(r, scaledServings) {
     <div class="detail-photo" style="${bg}">
       ${!r.photo ? '<span style="font-size:52px;margin:auto">🍽</span>' : ''}
       <div class="detail-photo-overlay">
-        <div class="detail-photo-title">${r.name}</div>
-        <div class="detail-photo-desc">${r.description}</div>
+        <div class="detail-photo-title">${displayName}</div>
+        <div class="detail-photo-desc">${displayDesc}</div>
       </div>
     </div>
-    ${r.story ? `<div class="story-block"><div class="story-label">STORY / CÂU CHUYỆN / ИСТОРИЯ</div><div class="story-text">${r.story}</div></div>` : ''}
+    ${metaBadges ? `<div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap">${metaBadges}</div>` : ''}
+    ${displayStory ? `<div class="story-block"><div class="story-label">STORY / CÂU CHUYỆN / ИСТОРИЯ</div><div class="story-text">${displayStory}</div></div>` : ''}
 
     <div class="scale-box mb20">
       <div class="scale-label">⚖ ${T[lang].scale.title}</div>
@@ -1144,7 +1265,7 @@ function buildDetailHTML(r, scaledServings) {
       <div class="nut-big"><div class="nut-big-val" style="color:#D4875A">${sn.fat}</div><div class="nut-big-unit">g</div><div class="nut-big-lbl">Fat</div></div>
       <div class="nut-big"><div class="nut-big-val" style="color:#7B9ECC">${sn.carbs}</div><div class="nut-big-unit">g</div><div class="nut-big-lbl">Carbs</div></div>
     </div>
-    ${r.notes ? `<p style="font-size:13px;color:var(--text-muted);font-style:italic;margin-bottom:16px">📝 ${r.notes}</p>` : ''}
+    ${displayNotes ? `<p style="font-size:13px;color:var(--text-muted);font-style:italic;margin-bottom:16px">📝 ${displayNotes}</p>` : ''}
     <div class="flex-end">
       <button class="btn btn-secondary" onclick="closeModal('detail-modal')">${T[lang].recipe.cancel}</button>
       <button class="btn btn-primary" onclick="closeModal('detail-modal');openEditModal('${r.id}')">✏ ${T[lang].recipe.edit}</button>
@@ -1162,8 +1283,8 @@ function updateDetailScale(id, newServings) {
 function renderCategorySelect() {
   const sel = document.getElementById('f-category');
   if (!sel) return;
-  const cats = ['desserts','asian','european','drinks','hot','cold','party','diet','vegetarian'];
-  sel.innerHTML = cats.map(c => `<option value="${c}">${T[lang].categories[c]}</option>`).join('');
+  sel.innerHTML = categories.map(c => `<option value="${c.id}">${getCatLabel(c.id)}</option>`).join('');
+  onCategoryChange();
 }
 
 function openAddModal() {
@@ -1186,8 +1307,17 @@ function openEditModal(id) {
 
 function clearForm() {
   ['f-name','f-description','f-story','f-country','f-notes'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  // clear hidden multilang
+  ['f-name-ru','f-name-vi','f-name-en','f-desc-ru','f-desc-vi','f-desc-en',
+   'f-story-ru','f-story-vi','f-story-en','f-notes-ru','f-notes-vi','f-notes-en'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value='';
+  });
   document.getElementById('f-servings').value = 2;
-  document.getElementById('f-time').value = 30;
+  document.getElementById('f-hours').value = 0;
+  document.getElementById('f-minutes').value = 30;
+  document.getElementById('f-cook-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('f-diameter').value = 22;
+  document.getElementById('f-diameter-wrap').classList.add('hidden');
   document.getElementById('f-cal').value = 0;
   document.getElementById('f-protein').value = 0;
   document.getElementById('f-fat').value = 0;
@@ -1195,49 +1325,74 @@ function clearForm() {
   document.getElementById('f-id').value = '';
   document.getElementById('f-photo-data').value = '';
   document.getElementById('f-photo-preview').style.display = 'none';
-  document.getElementById('f-photo-preview').src = '';
   document.getElementById('f-ingredients').innerHTML = '';
   document.getElementById('f-steps').innerHTML = '';
+  document.getElementById('translate-status').textContent = '';
+  document.getElementById('kbju-auto-badge').classList.add('hidden');
   addIngredientRow();
   addStepRow();
 }
 
 function fillForm(r) {
   document.getElementById('f-id').value = r.id;
-  document.getElementById('f-name').value = r.name;
-  document.getElementById('f-description').value = r.description;
-  document.getElementById('f-story').value = r.story || '';
+  // Use current lang version if multilang stored, else fallback to plain name
+  document.getElementById('f-name').value = r.nameI18n?.[lang] || r.name;
+  document.getElementById('f-description').value = r.descI18n?.[lang] || r.description;
+  document.getElementById('f-story').value = r.storyI18n?.[lang] || r.story || '';
+  document.getElementById('f-notes').value = r.notesI18n?.[lang] || r.notes || '';
+  // Restore multilang hidden
+  ['ru','vi','en'].forEach(l => {
+    const n = document.getElementById('f-name-'+l); if(n) n.value = r.nameI18n?.[l]||'';
+    const d = document.getElementById('f-desc-'+l); if(d) d.value = r.descI18n?.[l]||'';
+    const s = document.getElementById('f-story-'+l); if(s) s.value = r.storyI18n?.[l]||'';
+    const nt= document.getElementById('f-notes-'+l); if(nt) nt.value = r.notesI18n?.[l]||'';
+  });
   document.getElementById('f-servings').value = r.servings;
-  document.getElementById('f-time').value = r.time;
+  document.getElementById('f-hours').value = r.cookingHours || 0;
+  document.getElementById('f-minutes').value = r.cookingMinutes || r.time || 30;
+  document.getElementById('f-cook-date').value = r.cookingDate || new Date().toISOString().slice(0,10);
   document.getElementById('f-country').value = r.country || '';
-  document.getElementById('f-notes').value = r.notes || '';
   document.getElementById('f-cal').value = r.nutrition.calories;
   document.getElementById('f-protein').value = r.nutrition.protein;
   document.getElementById('f-fat').value = r.nutrition.fat;
   document.getElementById('f-carbs').value = r.nutrition.carbs;
   document.getElementById('f-category').value = r.category;
+  onCategoryChange();
+  if (r.category === 'desserts' && r.diameter) {
+    document.getElementById('f-diameter').value = r.diameter;
+  }
   document.getElementById('f-photo-data').value = r.photo || '';
-  previewPhotoUrl(r.photo || '');
+  if (r.photo) {
+    const prev = document.getElementById('f-photo-preview');
+    prev.src = r.photo; prev.style.display = '';
+  }
   // Ingredients
   document.getElementById('f-ingredients').innerHTML = '';
   (r.ingredients||[]).forEach(ing => addIngredientRow(ing));
   // Steps
   document.getElementById('f-steps').innerHTML = '';
   (r.steps||[]).forEach(s => addStepRow(s));
+  // check if was auto-translated
+  if (r.nameI18n?.ru && r.nameI18n?.en && r.nameI18n?.vi) {
+    document.getElementById('kbju-auto-badge').classList.remove('hidden');
+  }
 }
 
 let ingCount = 0;
+const UNITS = ['г','мл','шт','ч.л.','ст.л.','kg','oz','cup'];
+
 function addIngredientRow(ing = null) {
   ingCount++;
   const id = 'ing-' + ingCount;
   const row = document.createElement('div');
   row.className = 'ing-row-grid';
   row.id = id;
+  const unitOpts = UNITS.map(u => `<option value="${u}"${(ing?.unit||'г')===u?' selected':''}>${u}</option>`).join('');
   row.innerHTML = `
-    <input type="text" placeholder="${T[lang].recipe.ingredientName||'Ingredient'}" value="${ing?.name||''}" class="ing-name-input"/>
-    <input type="number" placeholder="g" value="${ing?.amount||''}" class="ing-amount-input" min="0"/>
-    <input type="text" placeholder="g/ml" value="${ing?.unit||'g'}" class="ing-unit-input"/>
-    <button class="btn btn-danger btn-icon" onclick="document.getElementById('${id}').remove()">✕</button>`;
+    <input type="text" placeholder="${T[lang].recipe.ingredientName||'Ингредиент'}" value="${ing?.name||''}" class="ing-name-input" oninput="scheduleKbjuCalc()"/>
+    <input type="number" placeholder="0" value="${ing?.amount||''}" class="ing-amount-input" min="0" oninput="scheduleKbjuCalc()"/>
+    <select class="ing-unit-input" onchange="scheduleKbjuCalc()">${unitOpts}</select>
+    <button class="btn btn-danger btn-icon" onclick="document.getElementById('${id}').remove();scheduleKbjuCalc()">✕</button>`;
   document.getElementById('f-ingredients').appendChild(row);
 }
 
@@ -1258,15 +1413,16 @@ function renumberSteps() {
   document.querySelectorAll('#f-steps .step-num').forEach((el, i) => el.textContent = i + 1);
 }
 
-function previewPhotoUrl(url) {
-  const prev = document.getElementById('f-photo-preview');
-  if (url && url.startsWith('http')) {
-    prev.src = url;
-    prev.style.display = '';
-    prev.onerror = () => { prev.style.display = 'none'; };
-  } else {
-    prev.style.display = 'none';
-  }
+function handlePhotoUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('f-photo-data').value = ev.target.result;
+    const prev = document.getElementById('f-photo-preview');
+    prev.src = ev.target.result; prev.style.display = '';
+  };
+  reader.readAsDataURL(file);
 }
 
 function saveRecipeForm() {
@@ -1279,7 +1435,7 @@ function saveRecipeForm() {
     id: 'i' + (i+1),
     name: row.querySelector('.ing-name-input').value,
     amount: parseFloat(row.querySelector('.ing-amount-input').value) || 0,
-    unit: row.querySelector('.ing-unit-input').value || 'g',
+    unit: row.querySelector('.ing-unit-input').value || 'г',
   })).filter(i => i.name);
 
   // Collect steps
@@ -1288,16 +1444,51 @@ function saveRecipeForm() {
 
   const id = document.getElementById('f-id').value || ('r' + Date.now());
   const existing = recipes.find(r => r.id === id);
+  const category = document.getElementById('f-category').value;
+
+  // Collect multilang data
+  const nameI18n = {
+    ru: document.getElementById('f-name-ru').value || name,
+    en: document.getElementById('f-name-en').value || name,
+    vi: document.getElementById('f-name-vi').value || name,
+  };
+  const descI18n = {
+    ru: document.getElementById('f-desc-ru').value || document.getElementById('f-description').value,
+    en: document.getElementById('f-desc-en').value || document.getElementById('f-description').value,
+    vi: document.getElementById('f-desc-vi').value || document.getElementById('f-description').value,
+  };
+  const storyI18n = {
+    ru: document.getElementById('f-story-ru').value || document.getElementById('f-story').value,
+    en: document.getElementById('f-story-en').value || document.getElementById('f-story').value,
+    vi: document.getElementById('f-story-vi').value || document.getElementById('f-story').value,
+  };
+  const notesI18n = {
+    ru: document.getElementById('f-notes-ru').value || document.getElementById('f-notes').value,
+    en: document.getElementById('f-notes-en').value || document.getElementById('f-notes').value,
+    vi: document.getElementById('f-notes-vi').value || document.getElementById('f-notes').value,
+  };
+
+  const cookingHours = parseInt(document.getElementById('f-hours').value) || 0;
+  const cookingMinutes = parseInt(document.getElementById('f-minutes').value) || 0;
 
   const recipe = {
     id,
-    name,
-    description: document.getElementById('f-description').value,
-    story: document.getElementById('f-story').value,
-    category: document.getElementById('f-category').value,
+    name: nameI18n[lang] || name,
+    nameI18n,
+    description: descI18n[lang] || document.getElementById('f-description').value,
+    descI18n,
+    story: storyI18n[lang] || document.getElementById('f-story').value,
+    storyI18n,
+    notes: notesI18n[lang] || document.getElementById('f-notes').value,
+    notesI18n,
+    category,
     country: document.getElementById('f-country').value,
     servings: parseInt(document.getElementById('f-servings').value) || 2,
-    time: parseInt(document.getElementById('f-time').value) || 0,
+    cookingHours,
+    cookingMinutes,
+    time: cookingHours * 60 + cookingMinutes, // keep legacy field
+    cookingDate: document.getElementById('f-cook-date').value,
+    diameter: category === 'desserts' ? (parseInt(document.getElementById('f-diameter').value) || null) : null,
     photo: document.getElementById('f-photo-data').value,
     nutrition: {
       calories: parseInt(document.getElementById('f-cal').value) || 0,
@@ -1308,7 +1499,6 @@ function saveRecipeForm() {
     ingredients,
     steps,
     substitutes: existing?.substitutes || {},
-    notes: document.getElementById('f-notes').value,
     viewedAt: existing?.viewedAt || [],
     createdAt: existing?.createdAt || new Date().toISOString(),
   };
@@ -1318,7 +1508,7 @@ function saveRecipeForm() {
   } else {
     recipes.push(recipe);
   }
-  save([recipe]);
+  save();
   closeModal('recipe-modal');
   renderRecipes();
   // add country if new
@@ -1329,28 +1519,10 @@ function saveRecipeForm() {
   }
 }
 
-function canEdit(r) {
-  const user = window._currentUser;
-  if (!user) return false;
-  // Nếu recipe chưa có ownerId (dữ liệu cũ) thì cho phép user hiện tại edit
-  if (!r.ownerId) return true;
-  return r.ownerId === user.uid;
-}
-
-async function deleteRecipe(id) {
-  const r = recipes.find(x => x.id === id);
-  if (!r) return;
-  // Kiểm tra quyền: chỉ owner mới được xoá
-  const user = window._currentUser;
-  if (!user) { alert('Bạn cần đăng nhập để xoá công thức.'); return; }
-  if (r.ownerId && r.ownerId !== user.uid) { alert('Bạn không có quyền xoá công thức này.'); return; }
-  if (!confirm('Xoá công thức này?')) return;
-  recipes = recipes.filter(x => x.id !== id);
+function deleteRecipe(id) {
+  if (!confirm('Delete this recipe?')) return;
+  recipes = recipes.filter(r => r.id !== id);
   save();
-  // Xoá trên Firestore public
-  if (typeof window.firestoreDeleteRecipe === 'function') {
-    await window.firestoreDeleteRecipe(id);
-  }
   renderRecipes();
 }
 
@@ -1520,6 +1692,244 @@ function saveCountry() {
 function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 function closeModalOnBg(e, id) { if (e.target === e.currentTarget) closeModal(id); }
+
+// ─── CONDITIONAL CATEGORY LOGIC ─────────────────────────────────────────────
+function onCategoryChange() {
+  const cat = document.getElementById('f-category')?.value;
+  const wrap = document.getElementById('f-diameter-wrap');
+  if (wrap) {
+    wrap.classList.toggle('hidden', cat !== 'desserts');
+  }
+}
+
+// ─── AUTO TRANSLATE VIA CLAUDE API ───────────────────────────────────────────
+async function autoTranslateForm() {
+  const name = document.getElementById('f-name').value.trim();
+  const desc = document.getElementById('f-description').value.trim();
+  const story = document.getElementById('f-story').value.trim();
+  const notes = document.getElementById('f-notes').value.trim();
+
+  if (!name) { alert('Введите название рецепта перед переводом'); return; }
+
+  const btn = document.getElementById('translate-btn');
+  const statusEl = document.getElementById('translate-status');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="translate-spinner">⏳</span> Переводим...';
+  statusEl.textContent = '';
+
+  const prompt = `Переведи следующие поля рецепта на русский (ru), английский (en) и вьетнамский (vi).
+Ответь ТОЛЬКО валидным JSON без markdown, без пояснений.
+
+Поля:
+- name: "${name}"
+- description: "${desc}"
+- story: "${story}"
+- notes: "${notes}"
+
+Формат ответа:
+{"name":{"ru":"...","en":"...","vi":"..."},"description":{"ru":"...","en":"...","vi":"..."},"story":{"ru":"...","en":"...","vi":"..."},"notes":{"ru":"...","en":"...","vi":"..."}}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content?.map(b => b.text||'').join('').trim();
+    const clean = text.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(clean);
+
+    // Fill hidden fields
+    ['ru','vi','en'].forEach(l => {
+      const n = document.getElementById('f-name-'+l); if(n) n.value = parsed.name?.[l]||name;
+      const d = document.getElementById('f-desc-'+l); if(d) d.value = parsed.description?.[l]||desc;
+      const s = document.getElementById('f-story-'+l); if(s) s.value = parsed.story?.[l]||story;
+      const nt= document.getElementById('f-notes-'+l); if(nt) nt.value = parsed.notes?.[l]||notes;
+    });
+
+    statusEl.textContent = `✅ Переведено: RU / EN / VI`;
+    statusEl.style.color = 'var(--success)';
+    document.getElementById('kbju-auto-badge').classList.remove('hidden');
+  } catch(e) {
+    statusEl.textContent = '❌ Ошибка перевода: ' + e.message;
+    statusEl.style.color = 'var(--danger)';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🌐 <span>Перевести на все языки</span>';
+  }
+}
+
+// ─── AUTO KBJU CALCULATION (local DB) ────────────────────────────────────────
+// Simple local nutrition database (per 100g)
+const NUTRITION_DB = {
+  // Мясо/рыба
+  'говядина':{cal:250,p:26,f:17,c:0},'beef':{cal:250,p:26,f:17,c:0},
+  'курица':{cal:165,p:31,f:4,c:0},'chicken':{cal:165,p:31,f:4,c:0},
+  'лосось':{cal:208,p:20,f:13,c:0},'salmon':{cal:208,p:20,f:13,c:0},
+  'свинина':{cal:242,p:27,f:14,c:0},'pork':{cal:242,p:27,f:14,c:0},
+  // Молочные
+  'яйцо':{cal:155,p:13,f:11,c:1},'egg':{cal:155,p:13,f:11,c:1},'eggs':{cal:155,p:13,f:11,c:1},
+  'молоко':{cal:61,p:3,f:3,c:5},'milk':{cal:61,p:3,f:3,c:5},
+  'сыр':{cal:402,p:25,f:33,c:1},'cheese':{cal:402,p:25,f:33,c:1},
+  'масло':{cal:748,p:1,f:82,c:1},'butter':{cal:748,p:1,f:82,c:1},
+  'сметана':{cal:206,p:3,f:20,c:4},'sour cream':{cal:206,p:3,f:20,c:4},
+  'mascarpone':{cal:429,p:5,f:44,c:4},'маскарпоне':{cal:429,p:5,f:44,c:4},
+  // Крупы/мука
+  'рис':{cal:130,p:3,f:0,c:28},'rice':{cal:130,p:3,f:0,c:28},
+  'макароны':{cal:350,p:12,f:1,c:70},'pasta':{cal:350,p:12,f:1,c:70},
+  'мука':{cal:364,p:10,f:1,c:76},'flour':{cal:364,p:10,f:1,c:76},
+  'хлеб':{cal:265,p:9,f:3,c:49},'bread':{cal:265,p:9,f:3,c:49},
+  'рисовая лапша':{cal:109,p:2,f:0,c:25},'rice noodles':{cal:109,p:2,f:0,c:25},
+  'ladyfingers':{cal:386,p:8,f:7,c:73},
+  // Овощи
+  'картофель':{cal:77,p:2,f:0,c:17},'potato':{cal:77,p:2,f:0,c:17},
+  'морковь':{cal:41,p:1,f:0,c:10},'carrot':{cal:41,p:1,f:0,c:10},
+  'лук':{cal:40,p:1,f:0,c:9},'onion':{cal:40,p:1,f:0,c:9},
+  'томат':{cal:18,p:1,f:0,c:4},'tomato':{cal:18,p:1,f:0,c:4},
+  'помидор':{cal:18,p:1,f:0,c:4},
+  'spring onions':{cal:32,p:2,f:0,c:7},'зелёный лук':{cal:32,p:2,f:0,c:7},
+  // Фрукты
+  'яблоко':{cal:52,p:0,f:0,c:14},'apple':{cal:52,p:0,f:0,c:14},
+  'банан':{cal:89,p:1,f:0,c:23},'banana':{cal:89,p:1,f:0,c:23},
+  'лимон':{cal:29,p:1,f:0,c:9},'lemon':{cal:29,p:1,f:0,c:9},
+  // Прочее
+  'сахар':{cal:387,p:0,f:0,c:100},'sugar':{cal:387,p:0,f:0,c:100},
+  'мёд':{cal:304,p:0,f:0,c:82},'honey':{cal:304,p:0,f:0,c:82},
+  'оливковое масло':{cal:884,p:0,f:100,c:0},'olive oil':{cal:884,p:0,f:100,c:0},
+  'говяжий бульон':{cal:13,p:2,f:1,c:0},'beef broth':{cal:13,p:2,f:1,c:0},
+  'матча':{cal:300,p:30,f:5,c:38},'matcha powder':{cal:300,p:30,f:5,c:38},
+  'кофе':{cal:1,p:0,f:0,c:0},'espresso':{cal:9,p:1,f:0,c:1},
+  'какао':{cal:228,p:20,f:14,c:58},'cocoa':{cal:228,p:20,f:14,c:58},
+};
+
+// Unit conversion to grams
+const UNIT_TO_GRAMS = {
+  'г':1,'g':1,'гр':1,
+  'кг':1000,'kg':1000,
+  'мл':1,'ml':1, // water-like density 1g/ml approx
+  'л':1000,'l':1000,
+  'ч.л.':5,'tsp':5,
+  'ст.л.':15,'tbsp':15,
+  'cup':240,
+  'шт':null, // handled separately
+  'oz':28,'lb':453,
+};
+
+let kbjuTimer = null;
+function scheduleKbjuCalc() {
+  clearTimeout(kbjuTimer);
+  kbjuTimer = setTimeout(calcKbjuFromIngredients, 600);
+}
+
+function calcKbjuFromIngredients() {
+  const rows = document.querySelectorAll('#f-ingredients .ing-row-grid');
+  let totCal=0, totP=0, totF=0, totC=0, found=0;
+
+  rows.forEach(row => {
+    const rawName = row.querySelector('.ing-name-input')?.value?.trim().toLowerCase();
+    const amount = parseFloat(row.querySelector('.ing-amount-input')?.value) || 0;
+    const unit = row.querySelector('.ing-unit-input')?.value || 'г';
+    if (!rawName || !amount) return;
+
+    // Find in DB (partial match)
+    let entry = null;
+    for (const key of Object.keys(NUTRITION_DB)) {
+      if (rawName.includes(key) || key.includes(rawName)) { entry = NUTRITION_DB[key]; break; }
+    }
+    if (!entry) return;
+
+    // Convert to grams
+    let grams = 0;
+    const conv = UNIT_TO_GRAMS[unit];
+    if (conv !== null && conv !== undefined) {
+      grams = amount * conv;
+    } else if (unit === 'шт') {
+      grams = amount * 50; // avg 50g per piece
+    }
+    if (!grams) return;
+
+    totCal += entry.cal * grams / 100;
+    totP   += entry.p   * grams / 100;
+    totF   += entry.f   * grams / 100;
+    totC   += entry.c   * grams / 100;
+    found++;
+  });
+
+  if (found > 0) {
+    document.getElementById('f-cal').value    = Math.round(totCal);
+    document.getElementById('f-protein').value = Math.round(totP);
+    document.getElementById('f-fat').value    = Math.round(totF);
+    document.getElementById('f-carbs').value  = Math.round(totC);
+    document.getElementById('kbju-auto-badge').classList.remove('hidden');
+  }
+}
+
+// ─── CATEGORY MANAGER ────────────────────────────────────────────────────────
+function openCategoryManager() {
+  renderCategoryManagerList();
+  openModal('category-manager-modal');
+}
+
+function renderCategoryManagerList() {
+  const list = document.getElementById('cat-manager-list');
+  if (!list) return;
+  list.innerHTML = categories.map(c => `
+    <div class="cat-manage-row">
+      <span class="cat-manage-name">${c.label.ru || c.label.en} / ${c.label.en} / ${c.label.vi}</span>
+      <div class="cat-manage-actions">
+        <button class="btn btn-secondary btn-sm" onclick="editCategory('${c.id}')">✏</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCategory('${c.id}')">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function addCategory() {
+  const ru = document.getElementById('cat-new-ru').value.trim();
+  const en = document.getElementById('cat-new-en').value.trim();
+  const vi = document.getElementById('cat-new-vi').value.trim();
+  if (!en) { alert('Введите название категории (EN обязательно)'); return; }
+  const id = 'cat_' + Date.now();
+  categories.push({ id, label: { ru: ru||en, en, vi: vi||en } });
+  window._categories = categories;
+  save();
+  ['cat-new-ru','cat-new-en','cat-new-vi'].forEach(i => { const el=document.getElementById(i); if(el) el.value=''; });
+  renderCategoryManagerList();
+  renderCategoryPills();
+  renderCategorySelect();
+}
+
+function deleteCategory(id) {
+  if (!confirm('Удалить категорию? Рецепты с этой категорией останутся, но отфильтровать их будет нельзя.')) return;
+  categories = categories.filter(c => c.id !== id);
+  window._categories = categories;
+  save();
+  renderCategoryManagerList();
+  renderCategoryPills();
+  renderCategorySelect();
+}
+
+function editCategory(id) {
+  const c = categories.find(x => x.id === id);
+  if (!c) return;
+  const ru = prompt('Название (RU):', c.label.ru);
+  if (ru === null) return;
+  const en = prompt('Название (EN):', c.label.en);
+  if (en === null) return;
+  const vi = prompt('Название (VI):', c.label.vi);
+  if (vi === null) return;
+  c.label = { ru: ru||c.label.ru, en: en||c.label.en, vi: vi||c.label.vi };
+  window._categories = categories;
+  save();
+  renderCategoryManagerList();
+  renderCategoryPills();
+  renderCategorySelect();
+}
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
