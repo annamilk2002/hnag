@@ -1788,65 +1788,92 @@ async function autoTranslateForm() {
 }
 
 // ─── AUTO KBJU CALCULATION (local DB) ────────────────────────────────────────
-// Simple local nutrition database (per 100g)
+// База продуктов: ключи на RU + EN + VI, значения на 100г {cal, p, f, c}
 const NUTRITION_DB = {
-  // Мясо/рыба
-  'говядина':{cal:250,p:26,f:17,c:0},'beef':{cal:250,p:26,f:17,c:0},
-  'курица':{cal:165,p:31,f:4,c:0},'chicken':{cal:165,p:31,f:4,c:0},
-  'лосось':{cal:208,p:20,f:13,c:0},'salmon':{cal:208,p:20,f:13,c:0},
-  'свинина':{cal:242,p:27,f:14,c:0},'pork':{cal:242,p:27,f:14,c:0},
-  // Молочные
-  'яйцо':{cal:155,p:13,f:11,c:1},'egg':{cal:155,p:13,f:11,c:1},'eggs':{cal:155,p:13,f:11,c:1},
-  'молоко':{cal:61,p:3,f:3,c:5},'milk':{cal:61,p:3,f:3,c:5},
-  'сыр':{cal:402,p:25,f:33,c:1},'cheese':{cal:402,p:25,f:33,c:1},
-  'масло':{cal:748,p:1,f:82,c:1},'butter':{cal:748,p:1,f:82,c:1},
+  // ── Мясо / Thịt / Meat ──
+  'говядина':{cal:250,p:26,f:17,c:0},'beef':{cal:250,p:26,f:17,c:0},'thịt bò':{cal:250,p:26,f:17,c:0},
+  'курица':{cal:165,p:31,f:4,c:0},'chicken':{cal:165,p:31,f:4,c:0},'thịt gà':{cal:165,p:31,f:4,c:0},
+  'грудка':{cal:165,p:31,f:4,c:0},'chicken breast':{cal:165,p:31,f:4,c:0},'ức gà':{cal:165,p:31,f:4,c:0},
+  'лосось':{cal:208,p:20,f:13,c:0},'salmon':{cal:208,p:20,f:13,c:0},'cá hồi':{cal:208,p:20,f:13,c:0},
+  'свинина':{cal:242,p:27,f:14,c:0},'pork':{cal:242,p:27,f:14,c:0},'thịt lợn':{cal:242,p:27,f:14,c:0},'thịt heo':{cal:242,p:27,f:14,c:0},
+  'тунец':{cal:132,p:28,f:1,c:0},'tuna':{cal:132,p:28,f:1,c:0},'cá ngừ':{cal:132,p:28,f:1,c:0},
+  'креветки':{cal:99,p:18,f:1,c:1},'shrimp':{cal:99,p:18,f:1,c:1},'tôm':{cal:99,p:18,f:1,c:1},
+  'говяжьи ломтики':{cal:250,p:26,f:17,c:0},'beef slices':{cal:250,p:26,f:17,c:0},
+  // ── Молочные / Sữa / Dairy ──
+  'яйцо':{cal:155,p:13,f:11,c:1},'яйца':{cal:155,p:13,f:11,c:1},'egg':{cal:155,p:13,f:11,c:1},'eggs':{cal:155,p:13,f:11,c:1},'trứng':{cal:155,p:13,f:11,c:1},
+  'молоко':{cal:61,p:3,f:3,c:5},'milk':{cal:61,p:3,f:3,c:5},'sữa':{cal:61,p:3,f:3,c:5},
+  'сыр':{cal:402,p:25,f:33,c:1},'cheese':{cal:402,p:25,f:33,c:1},'phô mai':{cal:402,p:25,f:33,c:1},
+  'масло сливочное':{cal:748,p:1,f:82,c:1},'butter':{cal:748,p:1,f:82,c:1},'bơ':{cal:748,p:1,f:82,c:1},
   'сметана':{cal:206,p:3,f:20,c:4},'sour cream':{cal:206,p:3,f:20,c:4},
-  'mascarpone':{cal:429,p:5,f:44,c:4},'маскарпоне':{cal:429,p:5,f:44,c:4},
-  // Крупы/мука
-  'рис':{cal:130,p:3,f:0,c:28},'rice':{cal:130,p:3,f:0,c:28},
-  'макароны':{cal:350,p:12,f:1,c:70},'pasta':{cal:350,p:12,f:1,c:70},
-  'мука':{cal:364,p:10,f:1,c:76},'flour':{cal:364,p:10,f:1,c:76},
-  'хлеб':{cal:265,p:9,f:3,c:49},'bread':{cal:265,p:9,f:3,c:49},
-  'рисовая лапша':{cal:109,p:2,f:0,c:25},'rice noodles':{cal:109,p:2,f:0,c:25},
-  'ladyfingers':{cal:386,p:8,f:7,c:73},
-  // Овощи
-  'картофель':{cal:77,p:2,f:0,c:17},'potato':{cal:77,p:2,f:0,c:17},
-  'морковь':{cal:41,p:1,f:0,c:10},'carrot':{cal:41,p:1,f:0,c:10},
-  'лук':{cal:40,p:1,f:0,c:9},'onion':{cal:40,p:1,f:0,c:9},
-  'томат':{cal:18,p:1,f:0,c:4},'tomato':{cal:18,p:1,f:0,c:4},
-  'помидор':{cal:18,p:1,f:0,c:4},
-  'spring onions':{cal:32,p:2,f:0,c:7},'зелёный лук':{cal:32,p:2,f:0,c:7},
-  // Фрукты
-  'яблоко':{cal:52,p:0,f:0,c:14},'apple':{cal:52,p:0,f:0,c:14},
-  'банан':{cal:89,p:1,f:0,c:23},'banana':{cal:89,p:1,f:0,c:23},
-  'лимон':{cal:29,p:1,f:0,c:9},'lemon':{cal:29,p:1,f:0,c:9},
-  // Прочее
-  'сахар':{cal:387,p:0,f:0,c:100},'sugar':{cal:387,p:0,f:0,c:100},
-  'мёд':{cal:304,p:0,f:0,c:82},'honey':{cal:304,p:0,f:0,c:82},
-  'оливковое масло':{cal:884,p:0,f:100,c:0},'olive oil':{cal:884,p:0,f:100,c:0},
-  'говяжий бульон':{cal:13,p:2,f:1,c:0},'beef broth':{cal:13,p:2,f:1,c:0},
-  'матча':{cal:300,p:30,f:5,c:38},'matcha powder':{cal:300,p:30,f:5,c:38},
-  'кофе':{cal:1,p:0,f:0,c:0},'espresso':{cal:9,p:1,f:0,c:1},
-  'какао':{cal:228,p:20,f:14,c:58},'cocoa':{cal:228,p:20,f:14,c:58},
+  'маскарпоне':{cal:429,p:5,f:44,c:4},'mascarpone':{cal:429,p:5,f:44,c:4},
+  'творог':{cal:155,p:17,f:7,c:3},'cottage cheese':{cal:103,p:11,f:5,c:3},
+  'йогурт':{cal:59,p:3,f:3,c:5},'yogurt':{cal:59,p:3,f:3,c:5},'sữa chua':{cal:59,p:3,f:3,c:5},
+  'сливки':{cal:337,p:2,f:35,c:3},'cream':{cal:337,p:2,f:35,c:3},'kem tươi':{cal:337,p:2,f:35,c:3},
+  // ── Крупы / Ngũ cốc / Grains ──
+  'рис':{cal:130,p:3,f:0,c:28},'rice':{cal:130,p:3,f:0,c:28},'gạo':{cal:130,p:3,f:0,c:28},'cơm':{cal:130,p:3,f:0,c:28},
+  'рисовая лапша':{cal:109,p:2,f:0,c:25},'rice noodles':{cal:109,p:2,f:0,c:25},'bún':{cal:109,p:2,f:0,c:25},'bánh phở':{cal:109,p:2,f:0,c:25},
+  'макароны':{cal:350,p:12,f:1,c:70},'pasta':{cal:350,p:12,f:1,c:70},'mì ống':{cal:350,p:12,f:1,c:70},
+  'мука':{cal:364,p:10,f:1,c:76},'flour':{cal:364,p:10,f:1,c:76},'bột mì':{cal:364,p:10,f:1,c:76},
+  'хлеб':{cal:265,p:9,f:3,c:49},'bread':{cal:265,p:9,f:3,c:49},'bánh mì':{cal:265,p:9,f:3,c:49},
+  'овсянка':{cal:389,p:17,f:7,c:66},'oats':{cal:389,p:17,f:7,c:66},'yến mạch':{cal:389,p:17,f:7,c:66},
+  'ladyfingers':{cal:386,p:8,f:7,c:73},'савоярди':{cal:386,p:8,f:7,c:73},
+  // ── Овощи / Rau / Vegetables ──
+  'картофель':{cal:77,p:2,f:0,c:17},'potato':{cal:77,p:2,f:0,c:17},'khoai tây':{cal:77,p:2,f:0,c:17},
+  'морковь':{cal:41,p:1,f:0,c:10},'carrot':{cal:41,p:1,f:0,c:10},'cà rốt':{cal:41,p:1,f:0,c:10},
+  'лук':{cal:40,p:1,f:0,c:9},'onion':{cal:40,p:1,f:0,c:9},'hành tây':{cal:40,p:1,f:0,c:9},
+  'зелёный лук':{cal:32,p:2,f:0,c:7},'spring onions':{cal:32,p:2,f:0,c:7},'green onions':{cal:32,p:2,f:0,c:7},'hành lá':{cal:32,p:2,f:0,c:7},
+  'томат':{cal:18,p:1,f:0,c:4},'помидор':{cal:18,p:1,f:0,c:4},'tomato':{cal:18,p:1,f:0,c:4},'cà chua':{cal:18,p:1,f:0,c:4},
+  'чеснок':{cal:149,p:6,f:1,c:33},'garlic':{cal:149,p:6,f:1,c:33},'tỏi':{cal:149,p:6,f:1,c:33},
+  'капуста':{cal:25,p:1,f:0,c:6},'cabbage':{cal:25,p:1,f:0,c:6},'bắp cải':{cal:25,p:1,f:0,c:6},
+  'шпинат':{cal:23,p:3,f:0,c:4},'spinach':{cal:23,p:3,f:0,c:4},'rau bina':{cal:23,p:3,f:0,c:4},
+  'перец болгарский':{cal:31,p:1,f:0,c:6},'bell pepper':{cal:31,p:1,f:0,c:6},'ớt chuông':{cal:31,p:1,f:0,c:6},
+  'баклажан':{cal:25,p:1,f:0,c:6},'eggplant':{cal:25,p:1,f:0,c:6},'cà tím':{cal:25,p:1,f:0,c:6},
+  'огурец':{cal:16,p:1,f:0,c:4},'cucumber':{cal:16,p:1,f:0,c:4},'dưa chuột':{cal:16,p:1,f:0,c:4},
+  'мит нон':{cal:35,p:1,f:0,c:8},'jackfruit':{cal:95,p:2,f:0,c:23},'mít non':{cal:35,p:1,f:0,c:8},'mít':{cal:95,p:2,f:0,c:23},
+  'lá lốt':{cal:40,p:3,f:1,c:6},'лá лот':{cal:40,p:3,f:1,c:6},
+  // ── Фрукты / Trái cây ──
+  'яблоко':{cal:52,p:0,f:0,c:14},'apple':{cal:52,p:0,f:0,c:14},'táo':{cal:52,p:0,f:0,c:14},
+  'банан':{cal:89,p:1,f:0,c:23},'banana':{cal:89,p:1,f:0,c:23},'chuối':{cal:89,p:1,f:0,c:23},
+  'лимон':{cal:29,p:1,f:0,c:9},'lemon':{cal:29,p:1,f:0,c:9},'chanh':{cal:29,p:1,f:0,c:9},
+  'авокадо':{cal:160,p:2,f:15,c:9},'avocado':{cal:160,p:2,f:15,c:9},'bơ trái':{cal:160,p:2,f:15,c:9},
+  // ── Масла / Dầu / Oils ──
+  'масло':{cal:748,p:1,f:82,c:1},'оливковое масло':{cal:884,p:0,f:100,c:0},'olive oil':{cal:884,p:0,f:100,c:0},'dầu ô liu':{cal:884,p:0,f:100,c:0},
+  'подсолнечное масло':{cal:884,p:0,f:100,c:0},'sunflower oil':{cal:884,p:0,f:100,c:0},'dầu hướng dương':{cal:884,p:0,f:100,c:0},
+  'кунжутное масло':{cal:884,p:0,f:100,c:0},'sesame oil':{cal:884,p:0,f:100,c:0},'dầu mè':{cal:884,p:0,f:100,c:0},
+  // ── Прочее / Khác / Other ──
+  'сахар':{cal:387,p:0,f:0,c:100},'sugar':{cal:387,p:0,f:0,c:100},'đường':{cal:387,p:0,f:0,c:100},
+  'мёд':{cal:304,p:0,f:0,c:82},'honey':{cal:304,p:0,f:0,c:82},'mật ong':{cal:304,p:0,f:0,c:82},
+  'говяжий бульон':{cal:13,p:2,f:1,c:0},'beef broth':{cal:13,p:2,f:1,c:0},'nước dùng bò':{cal:13,p:2,f:1,c:0},
+  'матча':{cal:300,p:30,f:5,c:38},'matcha powder':{cal:300,p:30,f:5,c:38},'bột matcha':{cal:300,p:30,f:5,c:38},
+  'кофе':{cal:1,p:0,f:0,c:0},'espresso':{cal:9,p:1,f:0,c:1},'cà phê':{cal:9,p:1,f:0,c:1},
+  'какао':{cal:228,p:20,f:14,c:58},'cocoa':{cal:228,p:20,f:14,c:58},'bột cacao':{cal:228,p:20,f:14,c:58},
+  'соевый соус':{cal:53,p:8,f:1,c:5},'soy sauce':{cal:53,p:8,f:1,c:5},'nước tương':{cal:53,p:8,f:1,c:5},
+  'рыбный соус':{cal:35,p:5,f:0,c:4},'fish sauce':{cal:35,p:5,f:0,c:4},'nước mắm':{cal:35,p:5,f:0,c:4},
+  'мука рисовая':{cal:363,p:6,f:1,c:80},'rice flour':{cal:363,p:6,f:1,c:80},'bột gạo':{cal:363,p:6,f:1,c:80},
+  'кокосовое молоко':{cal:197,p:2,f:21,c:3},'coconut milk':{cal:197,p:2,f:21,c:3},'nước cốt dừa':{cal:197,p:2,f:21,c:3},
+  'арахис':{cal:567,p:26,f:49,c:16},'peanuts':{cal:567,p:26,f:49,c:16},'đậu phộng':{cal:567,p:26,f:49,c:16},
+  'tofu':{cal:76,p:8,f:4,c:2},'тофу':{cal:76,p:8,f:4,c:2},'đậu phụ':{cal:76,p:8,f:4,c:2},
+  'мисо паста':{cal:199,p:12,f:6,c:26},'miso':{cal:199,p:12,f:6,c:26},
+  'имбирь':{cal:80,p:2,f:1,c:18},'ginger':{cal:80,p:2,f:1,c:18},'gừng':{cal:80,p:2,f:1,c:18},
 };
 
 // Unit conversion to grams
 const UNIT_TO_GRAMS = {
   'г':1,'g':1,'гр':1,
   'кг':1000,'kg':1000,
-  'мл':1,'ml':1, // water-like density 1g/ml approx
+  'мл':1,'ml':1,
   'л':1000,'l':1000,
   'ч.л.':5,'tsp':5,
   'ст.л.':15,'tbsp':15,
   'cup':240,
-  'шт':null, // handled separately
+  'шт':null,
   'oz':28,'lb':453,
 };
 
 let kbjuTimer = null;
 function scheduleKbjuCalc() {
   clearTimeout(kbjuTimer);
-  kbjuTimer = setTimeout(calcKbjuFromIngredients, 600);
+  kbjuTimer = setTimeout(calcKbjuFromIngredients, 500);
 }
 
 function calcKbjuFromIngredients() {
@@ -1859,10 +1886,12 @@ function calcKbjuFromIngredients() {
     const unit = row.querySelector('.ing-unit-input')?.value || 'г';
     if (!rawName || !amount) return;
 
-    // Find in DB (partial match)
-    let entry = null;
-    for (const key of Object.keys(NUTRITION_DB)) {
-      if (rawName.includes(key) || key.includes(rawName)) { entry = NUTRITION_DB[key]; break; }
+    // Поиск в базе: точное совпадение → потом частичное
+    let entry = NUTRITION_DB[rawName] || null;
+    if (!entry) {
+      for (const key of Object.keys(NUTRITION_DB)) {
+        if (rawName.includes(key) || key.includes(rawName)) { entry = NUTRITION_DB[key]; break; }
+      }
     }
     if (!entry) return;
 
@@ -1872,7 +1901,7 @@ function calcKbjuFromIngredients() {
     if (conv !== null && conv !== undefined) {
       grams = amount * conv;
     } else if (unit === 'шт') {
-      grams = amount * 50; // avg 50g per piece
+      grams = amount * 60; // avg 60g per piece
     }
     if (!grams) return;
 
@@ -1884,10 +1913,10 @@ function calcKbjuFromIngredients() {
   });
 
   if (found > 0) {
-    document.getElementById('f-cal').value    = Math.round(totCal);
+    document.getElementById('f-cal').value     = Math.round(totCal);
     document.getElementById('f-protein').value = Math.round(totP);
-    document.getElementById('f-fat').value    = Math.round(totF);
-    document.getElementById('f-carbs').value  = Math.round(totC);
+    document.getElementById('f-fat').value     = Math.round(totF);
+    document.getElementById('f-carbs').value   = Math.round(totC);
     document.getElementById('kbju-auto-badge').classList.remove('hidden');
   }
 }
