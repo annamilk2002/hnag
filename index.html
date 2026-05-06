@@ -70,7 +70,6 @@
       const userInfo  = document.getElementById('user-info');
 
       if (user) {
-        window._isGuest = false;
         loginBtn.style.display  = 'none';
         logoutBtn.style.display = 'inline-flex';
         userInfo.style.display  = 'flex';
@@ -95,9 +94,8 @@
         userInfo.style.display  = 'none';
         userInfo.innerHTML = '';
         showSyncStatus('offline');
-        // Guest mode: keep SAMPLE recipes visible but mark as guest
-        window._isGuest = true;
-        if (typeof window.applyGuestMode === 'function') window.applyGuestMode();
+        // Reset to empty state when logged out
+        if (typeof window.resetAppData === 'function') window.resetAppData();
       }
     });
 
@@ -403,12 +401,33 @@
   }
 
   /* ── STEP ROW ── */
-  .step-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
+  .step-row {
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 12px 14px; margin-bottom: 12px; background: var(--beige-card);
+  }
+  .step-row-header { display: flex; gap: 10px; align-items: flex-start; }
   .step-num {
     width: 28px; height: 28px; border-radius: 50%; background: var(--warm);
     color: #fff; display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700; flex-shrink: 0; margin-top: 8px;
+    font-size: 12px; font-weight: 700; flex-shrink: 0; margin-top: 6px;
   }
+  .step-media-toggle { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .step-media-btn {
+    padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;
+    cursor: pointer; border: 1px dashed var(--border); background: transparent;
+    color: var(--text-muted); transition: all .2s; font-family: 'DM Sans', sans-serif;
+  }
+  .step-media-btn:hover { border-color: var(--warm); color: var(--warm); }
+  .step-media-section { margin-top: 8px; padding: 10px; background: var(--beige-deep); border-radius: var(--radius-sm); }
+  .step-img-preview { max-height: 120px; border-radius: 8px; object-fit: cover; margin-top: 6px; display: none; }
+  /* Detail view steps */
+  .step-detail-card {
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 14px; margin-bottom: 14px; background: var(--beige-card);
+  }
+  .step-detail-header { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 8px; }
+  .step-detail-img { width: 100%; max-height: 220px; object-fit: cover; border-radius: 8px; margin-top: 8px; }
+  .step-detail-video { width: 100%; aspect-ratio: 16/9; border-radius: 8px; border: none; margin-top: 8px; }
 
   /* ── DETAIL MODAL ── */
   .detail-photo {
@@ -511,18 +530,48 @@
     font-size: 28px; margin-bottom: 22px;
   }
 
-  /* ── GUEST MODE ── */
-  .guest-hidden { display: none !important; }
-  .guest-banner {
-    background: var(--warm-pale); border: 1px solid var(--warm-light);
-    border-radius: var(--radius-sm); padding: 10px 16px; margin-bottom: 20px;
-    font-size: 13px; color: var(--warm-dark); display: flex;
-    align-items: center; gap: 10px; flex-wrap: wrap;
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: #1F2937; color: #fff; padding: 12px 22px; border-radius: 24px;
+    font-size: 14px; font-weight: 500; z-index: 9999; transition: transform .3s ease, opacity .3s ease;
+    opacity: 0; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,.25);
   }
-  .guest-banner button {
-    width: auto; padding: 5px 14px; border-radius: 20px; background: var(--warm);
-    color: #fff; border: none; cursor: pointer; font-size: 12px; font-weight: 600;
-    font-family: 'DM Sans', sans-serif;
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  /* ── DRAFT ── */
+  .draft-ribbon {
+    position: absolute; top: 10px; left: -2px;
+    background: #6B7280; color: #fff;
+    font-size: 10px; font-weight: 700; letter-spacing: .8px;
+    padding: 3px 10px 3px 8px; border-radius: 0 4px 4px 0;
+    text-transform: uppercase; z-index: 2;
+    box-shadow: 1px 1px 4px rgba(0,0,0,.18);
+  }
+  .recipe-card.is-draft { opacity: .88; }
+  .recipe-card.is-draft .card-photo { filter: brightness(.93); }
+  .draft-tab-pill {
+    padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1px dashed #9CA3AF; background: transparent;
+    color: #6B7280; transition: all .2s; display: inline-flex; align-items: center; gap: 5px;
+  }
+  .draft-tab-pill.active { background: #6B7280; color: #fff; border-color: #6B7280; }
+  .draft-tab-pill:hover:not(.active) { border-color: #6B7280; color: #374151; }
+  .draft-count-badge {
+    background: var(--warm); color: #fff; border-radius: 10px;
+    padding: 1px 6px; font-size: 10px; font-weight: 700; min-width: 18px; text-align: center;
+  }
+  .btn-draft {
+    padding: 10px 20px; border-radius: var(--radius-sm); border: 1px dashed #9CA3AF;
+    cursor: pointer; font-size: 13px; font-family: 'DM Sans', sans-serif;
+    font-weight: 600; transition: all .2s; background: transparent; color: #6B7280;
+    white-space: nowrap;
+  }
+  .btn-draft:hover { background: #F3F4F6; border-color: #6B7280; color: #374151; }
+  .draft-info-bar {
+    background: #F3F4F6; border: 1px solid #E5E7EB; border-radius: var(--radius-sm);
+    padding: 8px 14px; margin-bottom: 16px; font-size: 12px; color: #6B7280;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   }
 
   /* ── EMPTY ── */
@@ -575,9 +624,9 @@
   <div class="logo">🍜 Recipe Book</div>
   <nav class="header-nav" id="main-nav">
     <button class="nav-btn active" onclick="showTab('recipes')" data-tab="recipes" id="nav-recipes">Recipes</button>
-    <button class="nav-btn guest-hidden" onclick="showTab('mealplan')" data-tab="mealplan" id="nav-mealplan">Meal Plan</button>
-    <button class="nav-btn guest-hidden" onclick="showTab('analytics')" data-tab="analytics" id="nav-analytics">Analytics</button>
-    <button class="nav-btn guest-hidden" onclick="showTab('profile')" data-tab="profile" id="nav-profile">Profile</button>
+    <button class="nav-btn" onclick="showTab('mealplan')" data-tab="mealplan" id="nav-mealplan">Meal Plan</button>
+    <button class="nav-btn" onclick="showTab('analytics')" data-tab="analytics" id="nav-analytics">Analytics</button>
+    <button class="nav-btn" onclick="showTab('profile')" data-tab="profile" id="nav-profile">Profile</button>
   </nav>
   <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
     <div class="lang-switcher">
@@ -610,15 +659,9 @@
     <h1 class="hero-title">Hôm nay ăn gì nhỉ?</h1>
     <p class="hero-sub" id="hero-sub">Your personal recipe manager</p>
 
-    <!-- Guest banner (shown only to unauthenticated users) -->
-    <div class="guest-banner hidden" id="guest-banner">
-      👀 Вы просматриваете рецепты как гость. Войдите, чтобы добавлять, редактировать и планировать питание.
-      <button onclick="loginWithGoogle()">Войти через Google</button>
-    </div>
-
     <div class="search-row">
       <input type="text" id="search-input" placeholder="Search recipes..." oninput="renderRecipes()"/>
-      <button class="btn btn-primary guest-hidden" id="btn-add-recipe" onclick="openAddModal()">+ <span data-i="recipe.add">Add Recipe</span></button>
+      <button class="btn btn-primary" onclick="openAddModal()">+ <span data-i="recipe.add">Add Recipe</span></button>
     </div>
 
     <div class="ing-row">
@@ -629,6 +672,23 @@
 
     <!-- Category pills -->
     <div class="pill-row" id="cat-pills"></div>
+
+    <!-- Draft filter -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+      <span class="draft-tab-pill" id="draft-pill-all" onclick="setDraftFilter('all')" style="display:none">
+        📋 Все
+      </span>
+      <span class="draft-tab-pill active" id="draft-pill-published" onclick="setDraftFilter('published')" style="display:none">
+        ✅ Опубликованные
+      </span>
+      <span class="draft-tab-pill" id="draft-pill-drafts" onclick="setDraftFilter('drafts')" style="display:none">
+        ✏ Черновики <span class="draft-count-badge" id="draft-count">0</span>
+      </span>
+    </div>
+    <!-- Draft info bar (shown when viewing drafts) -->
+    <div class="draft-info-bar hidden" id="draft-info-bar">
+      ✏ Вы просматриваете черновики. Нажмите на карточку, чтобы открыть и отредактировать.
+    </div>
 
     <!-- Country filter -->
     <div class="country-section">
@@ -806,7 +866,8 @@
     <input type="hidden" id="f-photo-data"/>
     <div class="flex-end">
       <button class="btn btn-secondary" onclick="closeModal('recipe-modal')" data-i="recipe.cancel">Cancel</button>
-      <button class="btn btn-primary" onclick="saveRecipeForm()" data-i="recipe.save">Save</button>
+      <button class="btn-draft" onclick="saveRecipeForm('draft')" title="Сохранить как черновик — можно доделать позже">💾 Черновик</button>
+      <button class="btn btn-primary" onclick="saveRecipeForm('publish')" data-i="recipe.save">Опубликовать</button>
     </div>
   </div>
 </div>
@@ -941,6 +1002,7 @@ let countryFilter = '';
 let ingQuery = '';
 let mealPlanView = 'day';
 let editingId = null;
+let draftFilter = 'all'; // 'all' | 'published' | 'drafts'
 
 // ── Data stored in window so Firebase module can access them ─────────────────
 const DEFAULT_COUNTRIES = ['Vietnam','Japan','Italy','France','Thailand','China','India','Mexico','Russia','Korea'];
@@ -957,58 +1019,28 @@ let countries = window._countries;
 
 // Sync window refs -> local vars after Firestore load
 window.applyFirestoreData = () => {
-  window._isGuest = false;
   // Only replace if Firestore returned actual data (not empty)
   if (window._recipes?.length)   recipes   = window._recipes;
   if (window._mealPlan)          mealPlan  = window._mealPlan;
   if (window._profile?.name)     profile   = window._profile;
   if (window._countries?.length) countries = window._countries;
   if (window._categories?.length) categories = window._categories;
-  // Show all nav tabs and hide guest UI
-  applyAuthUI(false);
   renderCategoryPills();
   renderCountryPills();
   renderRecipes();
   initMealPlanDate();
 };
 
-// Apply guest mode UI (recipes visible, everything else hidden)
-window.applyGuestMode = () => {
-  window._isGuest = true;
-  applyAuthUI(true);
-  renderCategoryPills();
-  renderCountryPills();
-  renderRecipes();
-};
-
-// Show/hide UI elements based on guest status
-function applyAuthUI(isGuest) {
-  // Nav tabs: hide Meal Plan / Analytics / Profile for guests
-  document.querySelectorAll('.guest-hidden').forEach(el => {
-    el.style.display = isGuest ? 'none' : '';
-  });
-  // Guest banner in recipes tab
-  const banner = document.getElementById('guest-banner');
-  if (banner) banner.classList.toggle('hidden', !isGuest);
-  // If guest tried to go to a protected tab, redirect to recipes
-  if (isGuest && ['mealplan','analytics','profile'].includes(currentTab)) {
-    showTab('recipes');
-  }
-}
-
-// Reset when logged out — guest mode keeps SAMPLE recipes visible
+// Reset when logged out
 window.resetAppData = () => {
   recipes    = window._recipes    = [...SAMPLE];
   mealPlan   = window._mealPlan   = [];
   profile    = window._profile    = {name:'My Kitchen', calorieGoal:2000, notes:''};
   countries  = window._countries  = [...DEFAULT_COUNTRIES];
   categories = window._categories = [...DEFAULT_CATS];
-  if (typeof window.applyGuestMode === 'function') window.applyGuestMode();
-  else {
-    renderCategoryPills();
-    renderCountryPills();
-    renderRecipes();
-  }
+  renderCategoryPills();
+  renderCountryPills();
+  renderRecipes();
 };
 
 async function save() {
@@ -1065,11 +1097,6 @@ function setLang(l) {
 
 // ─── TAB NAVIGATION ───────────────────────────────────────────────────────────
 function showTab(tab) {
-  // Block guests from protected tabs
-  if (window._isGuest && ['mealplan','analytics','profile'].includes(tab)) {
-    alert('Войдите в аккаунт, чтобы получить доступ к этому разделу.');
-    return;
-  }
   currentTab = tab;
   ['recipes','mealplan','analytics','profile'].forEach(k => {
     document.getElementById('tab-'+k).classList.toggle('hidden', k !== tab);
@@ -1145,6 +1172,11 @@ function filterCountry(c) {
 function renderRecipes() {
   const search = document.getElementById('search-input')?.value.toLowerCase() || '';
   let list = recipes;
+
+  // Draft filter
+  if (draftFilter === 'published') list = list.filter(r => !r.isDraft);
+  else if (draftFilter === 'drafts') list = list.filter(r => r.isDraft);
+
   if (selectedCat !== 'all') list = list.filter(r => r.category === selectedCat);
   if (countryFilter) list = list.filter(r => r.country === countryFilter);
   if (search) list = list.filter(r =>
@@ -1155,13 +1187,27 @@ function renderRecipes() {
     list = list.filter(r => terms.some(term => r.ingredients.some(i => i.name.toLowerCase().includes(term))));
   }
 
+  // Update draft pills visibility and count
+  const draftCount = recipes.filter(r => r.isDraft).length;
+  const isLoggedIn = !window._isGuest;
+  ['draft-pill-all','draft-pill-published','draft-pill-drafts'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = (isLoggedIn && draftCount > 0) ? '' : 'none';
+  });
+  const countEl = document.getElementById('draft-count');
+  if (countEl) countEl.textContent = draftCount;
+  const infoBar = document.getElementById('draft-info-bar');
+  if (infoBar) infoBar.classList.toggle('hidden', draftFilter !== 'drafts');
+
   const grid = document.getElementById('recipe-grid');
   const empty = document.getElementById('recipe-empty');
 
   if (list.length === 0) {
     grid.innerHTML = '';
     empty.classList.remove('hidden');
-    document.getElementById('empty-text').textContent = (search || ingQuery) ? T[lang].noResults : T[lang].empty;
+    document.getElementById('empty-text').textContent =
+      draftFilter === 'drafts' ? '✏ Черновиков пока нет' :
+      (search || ingQuery) ? T[lang].noResults : T[lang].empty;
     return;
   }
   empty.classList.add('hidden');
@@ -1169,7 +1215,6 @@ function renderRecipes() {
   grid.innerHTML = list.map(r => {
     const bg = r.photo ? `background-image:url(${r.photo})` : '';
     const emoji = !r.photo ? '🍽' : '';
-    // Show display name in current language
     const displayName = r.nameI18n?.[lang] || r.name;
     const displayDesc = r.descI18n?.[lang] || r.description;
     // Time badge
@@ -1185,22 +1230,24 @@ function renderRecipes() {
       ? `<span class="badge diameter-badge">⌀${r.diameter}см</span>` : '';
     const dateBadge = r.cookingDate
       ? `<div class="card-date-badge">📅 ${r.cookingDate}</div>` : '';
-    return `<div class="recipe-card" onclick="openDetail('${r.id}')">
+    const draftRibbon = r.isDraft
+      ? `<div class="draft-ribbon">Черновик</div>` : '';
+    return `<div class="recipe-card${r.isDraft ? ' is-draft' : ''}" onclick="${r.isDraft ? `openEditModal('${r.id}')` : `openDetail('${r.id}')`}">
       <div class="card-photo" style="${bg}">
+        ${draftRibbon}
         ${emoji ? `<span style="font-size:42px">${emoji}</span>` : ''}
-        <div class="card-actions" ${window._isGuest ? 'style="display:none!important"' : ''}>
+        <div class="card-actions">
           <button class="card-action-btn edit" onclick="event.stopPropagation();openEditModal('${r.id}')">✏</button>
           <button class="card-action-btn del" onclick="event.stopPropagation();deleteRecipe('${r.id}')">✕</button>
         </div>
       </div>
       <div class="card-body">
-        <div class="card-name">${displayName}</div>
-        <div class="card-desc">${displayDesc}</div>
+        <div class="card-name">${displayName}${r.isDraft ? ' <span style="font-size:11px;color:#9CA3AF;font-weight:400">(черновик)</span>' : ''}</div>
+        <div class="card-desc">${displayDesc || '<span style="color:#9CA3AF;font-style:italic">Описание не добавлено</span>'}</div>
         <div class="card-badges">
           <span class="badge">${getCatLabel(r.category)}</span>
           ${r.country ? `<span class="badge country">🌍 ${r.country}</span>` : ''}
-          ${timeBadge}
-          ${diameterBadge}
+          ${timeBadge}${diameterBadge}
         </div>
         ${dateBadge}
         <div class="nut-row">
@@ -1212,6 +1259,15 @@ function renderRecipes() {
       </div>
     </div>`;
   }).join('');
+}
+
+function setDraftFilter(filter) {
+  draftFilter = filter;
+  ['all','published','drafts'].forEach(f => {
+    const el = document.getElementById('draft-pill-' + f);
+    if (el) el.classList.toggle('active', f === filter);
+  });
+  renderRecipes();
 }
 
 function searchByIngredient() {
@@ -1265,11 +1321,20 @@ function buildDetailHTML(r, scaledServings) {
     </div>`;
   }).join('');
 
-  const steps = (r.steps||[]).map((s,i) => `
-    <div class="step-row">
-      <div class="step-num">${i+1}</div>
-      <p style="margin-top:4px;line-height:1.6;font-size:14px">${s}</p>
-    </div>`).join('');
+  const steps = (r.steps||[]).map((s,i) => {
+    const text  = typeof s === 'string' ? s : (s.text || '');
+    const photo = typeof s === 'object' ? (s.photo || '') : '';
+    const video = typeof s === 'object' ? (s.video || '') : '';
+    const photoHTML = photo ? `<img src="${photo}" class="step-detail-img" onerror="this.style.display='none'" alt="Step ${i+1}"/>` : '';
+    const videoHTML = video ? buildVideoEmbed(video) : '';
+    return `<div class="step-detail-card">
+      <div class="step-detail-header">
+        <div class="step-num">${i+1}</div>
+        <p style="margin-top:4px;line-height:1.6;font-size:14px">${text}</p>
+      </div>
+      ${photoHTML}${videoHTML}
+    </div>`;
+  }).join('');
 
   // Time display
   let timeStr = '';
@@ -1331,7 +1396,7 @@ function buildDetailHTML(r, scaledServings) {
     ${displayNotes ? `<p style="font-size:13px;color:var(--text-muted);font-style:italic;margin-bottom:16px">📝 ${displayNotes}</p>` : ''}
     <div class="flex-end">
       <button class="btn btn-secondary" onclick="closeModal('detail-modal')">${T[lang].recipe.cancel}</button>
-      ${window._isGuest ? '' : `<button class="btn btn-primary" onclick="closeModal('detail-modal');openEditModal('${r.id}')">✏ ${T[lang].recipe.edit}</button>`}
+      <button class="btn btn-primary" onclick="closeModal('detail-modal');openEditModal('${r.id}')">✏ ${T[lang].recipe.edit}</button>
     </div>`;
 }
 
@@ -1351,7 +1416,6 @@ function renderCategorySelect() {
 }
 
 function openAddModal() {
-  if (window._isGuest) { alert('Войдите в аккаунт, чтобы добавлять рецепты.'); return; }
   editingId = null;
   document.getElementById('recipe-modal-title').textContent = T[lang].recipe.add;
   clearForm();
@@ -1360,11 +1424,11 @@ function openAddModal() {
 }
 
 function openEditModal(id) {
-  if (window._isGuest) { alert('Войдите в аккаунт, чтобы редактировать рецепты.'); return; }
   const r = recipes.find(x => x.id === id);
   if (!r) return;
   editingId = id;
-  document.getElementById('recipe-modal-title').textContent = T[lang].recipe.edit;
+  document.getElementById('recipe-modal-title').textContent =
+    r.isDraft ? '✏ Редактировать черновик' : T[lang].recipe.edit;
   renderCategorySelect();
   fillForm(r);
   openModal('recipe-modal');
@@ -1467,20 +1531,149 @@ function addIngredientRow(ing = null) {
 }
 
 let stepCount = 0;
-function addStepRow(text = '') {
+
+// step can be: string (legacy) or object {text, photo, photoFile, video}
+function addStepRow(step = '') {
   stepCount++;
+  const sid = 'step-' + stepCount;
   const idx = document.getElementById('f-steps').children.length + 1;
+  const text = typeof step === 'string' ? step : (step.text || '');
+  const photo = typeof step === 'object' ? (step.photo || '') : '';
+  const video = typeof step === 'object' ? (step.video || '') : '';
+
   const row = document.createElement('div');
   row.className = 'step-row';
+  row.dataset.sid = sid;
+
   row.innerHTML = `
-    <div class="step-num">${idx}</div>
-    <input type="text" value="${text}" placeholder="Step ${idx}" style="flex:1"/>
-    <button class="btn btn-danger btn-icon" onclick="this.parentElement.remove();renumberSteps()">✕</button>`;
+    <div class="step-row-header">
+      <div class="step-num">${idx}</div>
+      <input type="text" class="step-text-input" value="${text.replace(/"/g,'&quot;')}" placeholder="Шаг ${idx}" style="flex:1"/>
+      <button class="btn btn-danger btn-icon" style="flex-shrink:0" onclick="this.closest('.step-row').remove();renumberSteps()">✕</button>
+    </div>
+    <div class="step-media-toggle">
+      <button type="button" class="step-media-btn" onclick="toggleStepMedia(this,'photo-upload')">📷 Загрузить фото</button>
+      <button type="button" class="step-media-btn" onclick="toggleStepMedia(this,'photo-url')">🔗 Ссылка на фото</button>
+      <button type="button" class="step-media-btn" onclick="toggleStepMedia(this,'video-url')">🎬 Видео (YouTube)</button>
+    </div>
+    <!-- Photo upload -->
+    <div class="step-media-section hidden" data-media="photo-upload">
+      <label style="margin-bottom:6px;font-size:11px;font-weight:600;color:var(--text-muted)">ЗАГРУЗИТЬ ФОТО</label>
+      <input type="file" accept="image/*" style="font-size:12px" onchange="handleStepPhotoUpload(this)"/>
+      <img class="step-img-preview" src="${photo && !photo.startsWith('http') ? photo : ''}" style="${photo && !photo.startsWith('http') ? 'display:block' : 'display:none'}"/>
+      <input type="hidden" class="step-photo-data" value="${photo && !photo.startsWith('http') ? photo : ''}"/>
+    </div>
+    <!-- Photo URL -->
+    <div class="step-media-section hidden" data-media="photo-url">
+      <label style="margin-bottom:6px;font-size:11px;font-weight:600;color:var(--text-muted)">ССЫЛКА НА ФОТО</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" class="step-photo-url" placeholder="https://..." value="${photo && photo.startsWith('http') ? photo : ''}" style="flex:1;font-size:13px"/>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="previewStepPhotoUrl(this)">Показать</button>
+      </div>
+      <img class="step-img-preview-url" src="${photo && photo.startsWith('http') ? photo : ''}" style="${photo && photo.startsWith('http') ? 'display:block;max-height:100px;border-radius:6px;margin-top:6px' : 'display:none;max-height:100px;border-radius:6px;margin-top:6px'}"/>
+    </div>
+    <!-- Video URL -->
+    <div class="step-media-section hidden" data-media="video-url">
+      <label style="margin-bottom:6px;font-size:11px;font-weight:600;color:var(--text-muted)">ССЫЛКА НА ВИДЕО</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" class="step-video-url" placeholder="https://youtube.com/watch?v=..." value="${video}" style="flex:1;font-size:13px"/>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="previewStepVideo(this)">Показать</button>
+      </div>
+      <div class="step-video-preview" style="margin-top:8px;${video ? '' : 'display:none'}">
+        ${video ? buildVideoEmbed(video) : ''}
+      </div>
+    </div>`;
+
   document.getElementById('f-steps').appendChild(row);
+
+  // If editing existing step with photo URL, show the photo-url section
+  if (photo && photo.startsWith('http')) {
+    const urlSection = row.querySelector('[data-media="photo-url"]');
+    if (urlSection) urlSection.classList.remove('hidden');
+  } else if (photo) {
+    const uploadSection = row.querySelector('[data-media="photo-upload"]');
+    if (uploadSection) uploadSection.classList.remove('hidden');
+  }
+  if (video) {
+    const videoSection = row.querySelector('[data-media="video-url"]');
+    if (videoSection) videoSection.classList.remove('hidden');
+  }
+}
+
+function toggleStepMedia(btn, type) {
+  const row = btn.closest('.step-row');
+  const section = row.querySelector(`[data-media="${type}"]`);
+  if (!section) return;
+  const isHidden = section.classList.contains('hidden');
+  // toggle only this section (others stay as-is)
+  section.classList.toggle('hidden', !isHidden);
+}
+
+function handleStepPhotoUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const row = input.closest('.step-row');
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const data = ev.target.result;
+    row.querySelector('.step-photo-data').value = data;
+    const prev = row.querySelector('.step-img-preview');
+    prev.src = data;
+    prev.style.display = 'block';
+    prev.style.maxHeight = '120px';
+    prev.style.borderRadius = '8px';
+    prev.style.marginTop = '6px';
+  };
+  reader.readAsDataURL(file);
+}
+
+function previewStepPhotoUrl(btn) {
+  const row = btn.closest('.step-row');
+  const url = row.querySelector('.step-photo-url').value.trim();
+  if (!url) return;
+  const prev = row.querySelector('.step-img-preview-url');
+  prev.src = url;
+  prev.style.display = 'block';
+  prev.onerror = () => { prev.style.display = 'none'; alert('Не удалось загрузить изображение по ссылке'); };
+}
+
+function previewStepVideo(btn) {
+  const row = btn.closest('.step-row');
+  const url = row.querySelector('.step-video-url').value.trim();
+  if (!url) return;
+  const preview = row.querySelector('.step-video-preview');
+  const embed = buildVideoEmbed(url);
+  if (embed) {
+    preview.innerHTML = embed;
+    preview.style.display = 'block';
+  } else {
+    alert('Введите корректную ссылку YouTube или Vimeo');
+  }
+}
+
+function buildVideoEmbed(url) {
+  if (!url) return '';
+  // YouTube
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+  if (ytMatch) {
+    return `<iframe src="https://www.youtube.com/embed/${ytMatch[1]}" style="width:100%;aspect-ratio:16/9;border-radius:8px;border:none" allowfullscreen></iframe>`;
+  }
+  // Vimeo
+  const vmMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vmMatch) {
+    return `<iframe src="https://player.vimeo.com/video/${vmMatch[1]}" style="width:100%;aspect-ratio:16/9;border-radius:8px;border:none" allowfullscreen></iframe>`;
+  }
+  // Generic video link
+  return `<a href="${url}" target="_blank" style="font-size:13px;color:var(--warm)">▶ Открыть видео</a>`;
 }
 
 function renumberSteps() {
-  document.querySelectorAll('#f-steps .step-num').forEach((el, i) => el.textContent = i + 1);
+  document.querySelectorAll('#f-steps .step-row').forEach((row, i) => {
+    const num = row.querySelector('.step-num');
+    if (num) num.textContent = i + 1;
+    const input = row.querySelector('.step-text-input');
+    if (input && !input.value) input.placeholder = `Шаг ${i + 1}`;
+  });
 }
 
 function handlePhotoUpload(e) {
@@ -1507,9 +1700,11 @@ function handlePhotoUrl(url) {
   prev.onerror = () => { prev.style.display = 'none'; };
 }
 
-function saveRecipeForm() {
+function saveRecipeForm(mode = 'publish') {
   const name = document.getElementById('f-name').value.trim();
-  if (!name) { alert('Please enter a recipe name'); return; }
+  // Drafts can be saved without a name (use placeholder)
+  if (!name && mode === 'publish') { alert('Please enter a recipe name'); return; }
+  const isDraft = (mode === 'draft');
 
   // Collect ingredients
   const ingRows = document.querySelectorAll('#f-ingredients .ing-row-grid');
@@ -1520,9 +1715,18 @@ function saveRecipeForm() {
     unit: row.querySelector('.ing-unit-input').value || 'г',
   })).filter(i => i.name);
 
-  // Collect steps
-  const steps = Array.from(document.querySelectorAll('#f-steps input[type=text]'))
-    .map(i => i.value.trim()).filter(Boolean);
+  // Collect steps (rich: text + photo + video)
+  const stepRows = document.querySelectorAll('#f-steps .step-row');
+  const steps = Array.from(stepRows).map(row => {
+    const text = (row.querySelector('.step-text-input')?.value || '').trim();
+    if (!text) return null;
+    // Photo: prefer file upload, fallback to URL
+    const photoData = row.querySelector('.step-photo-data')?.value || '';
+    const photoUrl  = row.querySelector('.step-photo-url')?.value.trim() || '';
+    const photo = photoData || photoUrl || '';
+    const video = row.querySelector('.step-video-url')?.value.trim() || '';
+    return { text, photo, video };
+  }).filter(Boolean);
 
   const id = document.getElementById('f-id').value || ('r' + Date.now());
   const existing = recipes.find(r => r.id === id);
@@ -1553,10 +1757,12 @@ function saveRecipeForm() {
   const cookingHours = parseInt(document.getElementById('f-hours').value) || 0;
   const cookingMinutes = parseInt(document.getElementById('f-minutes').value) || 0;
 
+  const effectiveName = name || '(Без названия)';
   const recipe = {
     id,
-    name: nameI18n[lang] || name,
-    nameI18n,
+    isDraft,
+    name: nameI18n[lang] || effectiveName,
+    nameI18n: isDraft && !name ? {ru:'(Без названия)',en:'(Untitled)',vi:'(Chưa đặt tên)'} : nameI18n,
     description: descI18n[lang] || document.getElementById('f-description').value,
     descI18n,
     story: storyI18n[lang] || document.getElementById('f-story').value,
@@ -1568,7 +1774,7 @@ function saveRecipeForm() {
     servings: parseInt(document.getElementById('f-servings').value) || 2,
     cookingHours,
     cookingMinutes,
-    time: cookingHours * 60 + cookingMinutes, // keep legacy field
+    time: cookingHours * 60 + cookingMinutes,
     cookingDate: document.getElementById('f-cook-date').value,
     diameter: category === 'desserts' ? (parseInt(document.getElementById('f-diameter').value) || null) : null,
     photo: document.getElementById('f-photo-data').value,
@@ -1583,6 +1789,7 @@ function saveRecipeForm() {
     substitutes: existing?.substitutes || {},
     viewedAt: existing?.viewedAt || [],
     createdAt: existing?.createdAt || new Date().toISOString(),
+    draftSavedAt: isDraft ? new Date().toISOString() : (existing?.draftSavedAt || null),
   };
 
   if (existing) {
@@ -1592,6 +1799,18 @@ function saveRecipeForm() {
   }
   save();
   closeModal('recipe-modal');
+  // If saved as draft, switch to draft filter so user sees it
+  if (isDraft) {
+    draftFilter = 'drafts';
+    ['all','published','drafts'].forEach(f => {
+      const el = document.getElementById('draft-pill-' + f);
+      if (el) el.classList.toggle('active', f === 'drafts');
+    });
+    showToast('💾 Черновик сохранён — можно продолжить позже');
+  } else {
+    if (draftFilter === 'drafts') { draftFilter = 'all'; }
+    showToast('✅ Рецепт опубликован!');
+  }
   renderRecipes();
   // add country if new
   if (recipe.country && !countries.includes(recipe.country)) {
@@ -1602,7 +1821,6 @@ function saveRecipeForm() {
 }
 
 function deleteRecipe(id) {
-  if (window._isGuest) { alert('Войдите в аккаунт, чтобы удалять рецепты.'); return; }
   if (!confirm('Delete this recipe?')) return;
   recipes = recipes.filter(r => r.id !== id);
   save();
@@ -1773,6 +1991,17 @@ function saveCountry() {
 
 // ─── MODAL HELPERS ───────────────────────────────────────────────────────────
 function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+
+// ─── TOAST ───────────────────────────────────────────────────────────────────
+let _toastTimer = null;
+function showToast(msg, duration = 3000) {
+  const el = document.getElementById('app-toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), duration);
+}
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 function closeModalOnBg(e, id) { if (e.target === e.currentTarget) closeModal(id); }
 
@@ -1815,23 +2044,13 @@ async function autoTranslateForm() {
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
         messages: [{ role: 'user', content: prompt }]
       })
     });
-
-    if (!resp.ok) {
-      const errData = await resp.json().catch(() => ({}));
-      throw new Error(errData?.error?.message || `HTTP ${resp.status}`);
-    }
-
     const data = await resp.json();
     const text = data.content?.map(b => b.text||'').join('').trim();
     const clean = text.replace(/```json|```/g,'').trim();
@@ -1851,7 +2070,6 @@ async function autoTranslateForm() {
   } catch(e) {
     statusEl.textContent = '❌ Ошибка перевода: ' + e.message;
     statusEl.style.color = 'var(--danger)';
-    console.error('Translation error:', e);
   } finally {
     btn.disabled = false;
     btn.innerHTML = '🌐 <span>Перевести на все языки</span>';
@@ -2056,17 +2274,15 @@ function editCategory(id) {
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // Start in guest mode until Firebase auth resolves
-  window._isGuest = true;
   renderCategoryPills();
   renderCountryPills();
   renderRecipes();
-  applyAuthUI(true); // hide protected UI until login confirmed
   initMealPlanDate();
   document.getElementById('mp-date').value = new Date().toISOString().slice(0,10);
   // Show offline status until auth resolves
   if (window.showSyncStatus) window.showSyncStatus('offline');
 });
 </script>
+<div class="toast" id="app-toast"></div>
 </body>
 </html>
