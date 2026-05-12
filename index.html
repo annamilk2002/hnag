@@ -626,6 +626,10 @@
     <button class="nav-btn active" onclick="showTab('recipes')" data-tab="recipes" id="nav-recipes">Recipes</button>
     <button class="nav-btn" onclick="showTab('mealplan')" data-tab="mealplan" id="nav-mealplan">Meal Plan</button>
     <button class="nav-btn" onclick="showTab('analytics')" data-tab="analytics" id="nav-analytics">Analytics</button>
+    <button class="nav-btn" onclick="showTab('water')" data-tab="water" id="nav-water">💧 Water</button>
+    <button class="nav-btn" onclick="showTab('fitness')" data-tab="fitness" id="nav-fitness">🏋️ Fitness</button>
+    <button class="nav-btn" onclick="showTab('body')" data-tab="body" id="nav-body">📊 Body</button>
+    <button class="nav-btn" onclick="showTab('reports')" data-tab="reports" id="nav-reports">📅 Reports</button>
     <button class="nav-btn" onclick="showTab('profile')" data-tab="profile" id="nav-profile">Profile</button>
   </nav>
   <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
@@ -746,6 +750,300 @@
         <textarea id="profile-notes" rows="3"></textarea>
       </div>
       <button class="btn btn-primary" onclick="saveProfile()"><span data-i="profile.save">Save Profile</span></button>
+    </div>
+  </div>
+
+  <!-- ══ WATER TRACKER TAB ══ -->
+  <div id="tab-water" class="hidden">
+    <h1 class="hero-title">💧 Water Tracker</h1>
+    <p class="hero-sub">Следи за водным балансом каждый день</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px;margin-top:8px">
+
+      <!-- Water card -->
+      <div class="chart-box" style="text-align:center">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+          <div class="section-title" style="margin-bottom:0">Сегодня</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:var(--text-muted)">Норма:</span>
+            <input type="number" id="water-goal-input" value="2000" min="500" max="5000" step="100"
+              style="width:80px;font-size:13px;padding:4px 8px;text-align:center"
+              onchange="setWaterGoal(this.value)"/>
+            <span style="font-size:12px;color:var(--text-muted)">мл</span>
+          </div>
+        </div>
+
+        <!-- SVG Glass -->
+        <div style="display:flex;justify-content:center;margin-bottom:20px">
+          <svg id="water-glass-svg" width="100" height="180" viewBox="0 0 100 180">
+            <defs><clipPath id="glassClip2">
+              <path d="M18 18 L8 162 Q8 172 18 172 L82 172 Q92 172 92 162 L82 18 Z"/>
+            </clipPath></defs>
+            <path d="M18 18 L8 162 Q8 172 18 172 L82 172 Q92 172 92 162 L82 18 Z"
+              fill="rgba(200,220,255,0.12)" stroke="#C8D6E5" stroke-width="2.5"/>
+            <rect id="water-fill-rect" x="0" y="172" width="100" height="0"
+              fill="#64B5F6" opacity="0.55" clip-path="url(#glassClip2)"
+              style="transition:all 0.7s ease"/>
+            <path id="water-wave" d="" fill="none" stroke="#64B5F6" stroke-width="2" opacity="0.7" clip-path="url(#glassClip2)"/>
+            <text id="water-pct-text" x="50" y="100" text-anchor="middle"
+              fill="var(--text)" font-size="15" font-weight="700" font-family="DM Sans,sans-serif">0%</text>
+          </svg>
+        </div>
+
+        <!-- Stats -->
+        <div style="font-size:32px;font-weight:700;color:#64B5F6;margin-bottom:6px" id="water-total-display">0</div>
+        <div style="font-size:14px;color:var(--text-muted);margin-bottom:14px" id="water-remain-display">Выпей 2000 мл для нормы</div>
+
+        <!-- Progress bar -->
+        <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin-bottom:20px">
+          <div id="water-progress-bar" style="height:100%;width:0%;background:#64B5F6;border-radius:4px;transition:width 0.6s ease"></div>
+        </div>
+
+        <!-- Quick buttons -->
+        <div style="display:flex;gap:8px;justify-content:center;margin-bottom:12px">
+          <button class="btn btn-secondary" onclick="addWater(100)">+100 мл</button>
+          <button class="btn btn-secondary" onclick="addWater(250)">+250 мл</button>
+          <button class="btn btn-secondary" onclick="addWater(500)">+500 мл</button>
+        </div>
+
+        <!-- Custom input -->
+        <div style="display:flex;gap:8px">
+          <input type="number" id="water-custom-input" placeholder="Своё количество мл..." min="1" max="2000"/>
+          <button class="btn btn-primary" onclick="addWaterCustom()">+ Добавить</button>
+        </div>
+      </div>
+
+      <!-- Log list -->
+      <div class="chart-box">
+        <div class="section-title">Записи за сегодня</div>
+        <div id="water-log-list" style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto">
+          <div style="text-align:center;color:var(--text-muted);padding:30px;font-size:14px">Ещё нет записей. Выпей воды! 💧</div>
+        </div>
+        <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:16px">
+          <div class="section-title">История по дням</div>
+          <div id="water-history-chart" class="bar-chart" style="height:100px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ FITNESS TAB ══ -->
+  <div id="tab-fitness" class="hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+      <div>
+        <h1 class="hero-title" style="margin-bottom:4px">🏋️ Fitness Tracker</h1>
+        <p class="hero-sub" style="margin-bottom:0">Записывай тренировки и следи за прогрессом</p>
+      </div>
+      <button class="btn btn-primary" onclick="toggleFitnessForm()">+ Добавить тренировку</button>
+    </div>
+
+    <!-- Form (hidden by default) -->
+    <div id="fitness-form-wrap" class="hidden chart-box" style="margin-bottom:22px">
+      <div class="section-title">Новая тренировка</div>
+      <div class="grid-3 mb16">
+        <div><label>Тип тренировки</label>
+          <select id="fit-type-sel"></select>
+        </div>
+        <div><label>Дата</label><input type="date" id="fit-date"/></div>
+        <div><label>Длительность (мин)</label><input type="number" id="fit-duration" placeholder="60" min="1"/></div>
+      </div>
+      <div class="grid-2 mb16">
+        <div><label>🔥 Калорий сожжено</label><input type="number" id="fit-calories" placeholder="300" min="0"/></div>
+        <div><label>Заметки</label><input type="text" id="fit-notes" placeholder="Как прошла тренировка?"/></div>
+      </div>
+
+      <!-- Exercises for this session -->
+      <div class="section-title">Упражнения в тренировке</div>
+      <div id="fit-exercises-picker" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px"></div>
+      <div id="fit-selected-exercises" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
+
+      <div class="flex-end">
+        <button class="btn btn-secondary" onclick="toggleFitnessForm()">Отмена</button>
+        <button class="btn btn-primary" onclick="saveFitnessSession()">💾 Сохранить</button>
+      </div>
+    </div>
+
+    <!-- Workout types management -->
+    <div class="chart-box" style="margin-bottom:22px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div class="section-title" style="margin-bottom:0">Типы тренировок</div>
+        <button class="btn btn-secondary btn-sm" onclick="toggleTypeForm()">+ Свой тип</button>
+      </div>
+      <div id="fitness-type-pills" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
+      <div id="type-form-wrap" class="hidden" style="display:flex;gap:8px;flex-wrap:wrap;padding:12px;background:var(--beige);border-radius:10px">
+        <input type="text" id="new-type-name" placeholder="Название типа" style="flex:1;min-width:140px"/>
+        <input type="color" id="new-type-color" value="#C8845A" style="width:44px;height:40px;border:none;border-radius:8px;cursor:pointer;padding:2px"/>
+        <button class="btn btn-primary" onclick="addWorkoutType()">Добавить</button>
+      </div>
+    </div>
+
+    <!-- Exercises library -->
+    <div class="chart-box" style="margin-bottom:22px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div class="section-title" style="margin-bottom:0">Библиотека упражнений</div>
+        <button class="btn btn-secondary btn-sm" onclick="toggleExerciseForm()">+ Упражнение</button>
+      </div>
+      <div id="exercise-form-wrap" class="hidden" style="padding:12px;background:var(--beige);border-radius:10px;margin-bottom:12px">
+        <div class="grid-3 mb12">
+          <div><label>Название</label><input type="text" id="new-ex-name" placeholder="Присед со штангой"/></div>
+          <div><label>Сетов</label><input type="number" id="new-ex-sets" placeholder="4" min="1"/></div>
+          <div><label>Повторений</label><input type="text" id="new-ex-reps" placeholder="8-12"/></div>
+        </div>
+        <div class="mb12"><label>Тип тренировки</label><select id="new-ex-type"></select></div>
+        <div class="flex-end"><button class="btn btn-primary" onclick="addExercise()">Добавить</button></div>
+      </div>
+      <div id="exercises-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <!-- Sessions history -->
+    <div class="chart-box">
+      <div class="section-title">История тренировок</div>
+      <div id="fitness-sessions-list" style="display:flex;flex-direction:column;gap:12px">
+        <div style="text-align:center;color:var(--text-muted);padding:40px;font-size:14px">
+          Тренировок пока нет. Добавь первую! 💪
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ BODY ANALYTICS TAB ══ -->
+  <div id="tab-body" class="hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+      <div>
+        <h1 class="hero-title" style="margin-bottom:4px">📊 Аналитика тела</h1>
+        <p class="hero-sub" style="margin-bottom:0">Отслеживай изменения тела и прогресс</p>
+      </div>
+      <button class="btn btn-primary" onclick="toggleBodyForm()">+ Добавить замер</button>
+    </div>
+
+    <!-- Summary cards -->
+    <div class="stat-cards" id="body-stat-cards" style="margin-bottom:22px"></div>
+
+    <!-- Add metric form -->
+    <div id="body-form-wrap" class="hidden chart-box" style="margin-bottom:22px">
+      <div class="section-title">Новый замер</div>
+      <div class="grid-4 mb16">
+        <div><label>Дата</label><input type="date" id="body-date"/></div>
+        <div><label>Вес (кг)</label><input type="number" id="body-weight" step="0.1" placeholder="65.0" min="30" max="300"/></div>
+        <div><label>% жира</label><input type="number" id="body-fat" step="0.1" placeholder="20.0" min="3" max="60"/></div>
+        <div><label>Мышцы (кг)</label><input type="number" id="body-muscle" step="0.1" placeholder="30.0" min="10" max="150"/></div>
+      </div>
+      <div class="mb16"><label>Заметки</label><input type="text" id="body-notes" placeholder="Как себя чувствуешь?"/></div>
+      <div class="flex-end">
+        <button class="btn btn-secondary" onclick="toggleBodyForm()">Отмена</button>
+        <button class="btn btn-primary" onclick="saveBodyMetric()">💾 Сохранить</button>
+      </div>
+    </div>
+
+    <!-- Charts row -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px;margin-bottom:22px">
+      <div class="chart-box">
+        <div class="section-title">⚖️ Вес (кг)</div>
+        <div id="body-weight-chart" class="bar-chart" style="height:100px"></div>
+      </div>
+      <div class="chart-box">
+        <div class="section-title">💪 Мышцы (кг)</div>
+        <div id="body-muscle-chart" class="bar-chart" style="height:100px"></div>
+      </div>
+      <div class="chart-box">
+        <div class="section-title">🔥 % жира</div>
+        <div id="body-fat-chart" class="bar-chart" style="height:100px"></div>
+      </div>
+    </div>
+
+    <!-- Metrics history table -->
+    <div class="chart-box" style="margin-bottom:22px">
+      <div class="section-title">История замеров</div>
+      <div style="overflow-x:auto">
+        <table id="body-metrics-table" style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="border-bottom:2px solid var(--border)">
+            <th style="text-align:left;padding:8px 10px;color:var(--text-muted);font-weight:600">Дата</th>
+            <th style="text-align:left;padding:8px 10px;color:var(--text-muted);font-weight:600">Вес</th>
+            <th style="text-align:left;padding:8px 10px;color:var(--text-muted);font-weight:600">% жира</th>
+            <th style="text-align:left;padding:8px 10px;color:var(--text-muted);font-weight:600">Мышцы</th>
+            <th style="text-align:left;padding:8px 10px;color:var(--text-muted);font-weight:600">Заметки</th>
+            <th style="padding:8px 10px"></th>
+          </tr></thead>
+          <tbody id="body-metrics-tbody"><tr><td colspan="6" style="padding:30px;text-align:center;color:var(--text-muted)">Замеров пока нет</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Progress photos -->
+    <div class="chart-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="section-title" style="margin-bottom:0">📸 Фото прогресса</div>
+        <button class="btn btn-secondary btn-sm" onclick="togglePhotoForm()">+ Добавить фото</button>
+      </div>
+      <div id="photo-form-wrap" class="hidden" style="padding:14px;background:var(--beige);border-radius:10px;margin-bottom:16px">
+        <div class="grid-2 mb12">
+          <div><label>Дата</label><input type="date" id="photo-date"/></div>
+          <div><label>Тип</label>
+            <select id="photo-type">
+              <option value="before">⬅️ До</option>
+              <option value="after">✅ После</option>
+              <option value="progress" selected>📷 Прогресс</option>
+            </select>
+          </div>
+        </div>
+        <div class="mb12"><label>URL фото (imgbb.com, imgur и др.)</label>
+          <input type="text" id="photo-url" placeholder="https://..."/>
+        </div>
+        <div class="mb12"><label>Заметки</label><input type="text" id="photo-notes" placeholder="Описание..."/></div>
+        <div class="flex-end">
+          <button class="btn btn-secondary" onclick="togglePhotoForm()">Отмена</button>
+          <button class="btn btn-primary" onclick="saveProgressPhoto()">Сохранить</button>
+        </div>
+      </div>
+      <div id="progress-photos-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px">
+        <div style="text-align:center;color:var(--text-muted);padding:30px;font-size:14px;grid-column:1/-1">
+          Добавь первое фото прогресса 📸
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ REPORTS TAB ══ -->
+  <div id="tab-reports" class="hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+      <div>
+        <h1 class="hero-title" style="margin-bottom:4px">📅 Отчёты</h1>
+        <p class="hero-sub" style="margin-bottom:0">Аналитика за неделю и месяц</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary btn-sm" id="rep-week-btn" onclick="setReportPeriod('week')">Неделя</button>
+        <button class="btn btn-secondary btn-sm" id="rep-month-btn" onclick="setReportPeriod('month')">Месяц</button>
+      </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="stat-cards" id="report-stat-cards" style="margin-bottom:22px"></div>
+
+    <!-- Water chart -->
+    <div class="chart-box" style="margin-bottom:22px">
+      <div class="section-title">💧 Вода по дням (мл)</div>
+      <div id="report-water-chart" class="bar-chart" style="height:120px"></div>
+    </div>
+
+    <!-- Workouts chart -->
+    <div class="chart-box" style="margin-bottom:22px">
+      <div class="section-title">🏋️ Тренировки по дням</div>
+      <div id="report-workout-chart" class="bar-chart" style="height:120px"></div>
+    </div>
+
+    <!-- Workout type breakdown -->
+    <div class="chart-box" style="margin-bottom:22px">
+      <div class="section-title">🏅 По типам тренировок</div>
+      <div id="report-type-breakdown" style="display:flex;flex-direction:column;gap:10px">
+        <div style="text-align:center;color:var(--text-muted);padding:20px;font-size:14px">Нет тренировок за период</div>
+      </div>
+    </div>
+
+    <!-- Sessions list -->
+    <div class="chart-box">
+      <div class="section-title">📋 Тренировки за период</div>
+      <div id="report-sessions-list">
+        <div style="text-align:center;color:var(--text-muted);padding:30px;font-size:14px">Нет данных</div>
+      </div>
     </div>
   </div>
 
@@ -1098,13 +1396,20 @@ function setLang(l) {
 // ─── TAB NAVIGATION ───────────────────────────────────────────────────────────
 function showTab(tab) {
   currentTab = tab;
-  ['recipes','mealplan','analytics','profile'].forEach(k => {
-    document.getElementById('tab-'+k).classList.toggle('hidden', k !== tab);
-    document.getElementById('nav-'+k).classList.toggle('active', k === tab);
+  const allTabs = ['recipes','mealplan','analytics','water','fitness','body','reports','profile'];
+  allTabs.forEach(k => {
+    const tabEl = document.getElementById('tab-'+k);
+    const navEl = document.getElementById('nav-'+k);
+    if (tabEl) tabEl.classList.toggle('hidden', k !== tab);
+    if (navEl) navEl.classList.toggle('active', k === tab);
   });
-  if (tab === 'mealplan') { initMealPlanDate(); renderMealPlan(); }
+  if (tab === 'mealplan')  { initMealPlanDate(); renderMealPlan(); }
   if (tab === 'analytics') renderAnalytics();
-  if (tab === 'profile') loadProfileForm();
+  if (tab === 'profile')   loadProfileForm();
+  if (tab === 'water')     renderWaterTab();
+  if (tab === 'fitness')   renderFitnessTab();
+  if (tab === 'body')      renderBodyTab();
+  if (tab === 'reports')   renderReports();
 }
 
 // ─── CATEGORY SYSTEM (dynamic) ────────────────────────────────────────────────
@@ -2281,7 +2586,701 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('mp-date').value = new Date().toISOString().slice(0,10);
   // Show offline status until auth resolves
   if (window.showSyncStatus) window.showSyncStatus('offline');
+  // Init fitness defaults
+  initFitnessData();
+  // Set today's date in forms
+  const today = new Date().toISOString().slice(0,10);
+  ['fit-date','body-date','photo-date'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = today;
+  });
 });
+
+// ══════════════════════════════════════════════════════════════
+// 💧 WATER TRACKER
+// ══════════════════════════════════════════════════════════════
+let waterLogs = JSON.parse(localStorage.getItem('waterLogs') || '[]');
+let waterGoal = parseInt(localStorage.getItem('waterGoal') || '2000');
+
+function saveWaterData() {
+  localStorage.setItem('waterLogs', JSON.stringify(waterLogs));
+  localStorage.setItem('waterGoal', String(waterGoal));
+}
+
+function getTodayStr() { return new Date().toISOString().slice(0,10); }
+
+function getTodayLogs() {
+  return waterLogs.filter(l => l.date === getTodayStr());
+}
+
+function getTodayTotal() {
+  return getTodayLogs().reduce((s, l) => s + l.amount, 0);
+}
+
+function addWater(ml) {
+  waterLogs.push({ id: Date.now(), date: getTodayStr(), amount: ml, time: new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}) });
+  saveWaterData();
+  renderWaterTab();
+  showToast('💧 Добавлено ' + ml + ' мл');
+}
+
+function addWaterCustom() {
+  const inp = document.getElementById('water-custom-input');
+  const val = parseInt(inp.value);
+  if (!val || val <= 0) return;
+  addWater(val);
+  inp.value = '';
+}
+
+function removeWaterLog(id) {
+  waterLogs = waterLogs.filter(l => l.id !== id);
+  saveWaterData();
+  renderWaterTab();
+}
+
+function setWaterGoal(val) {
+  waterGoal = parseInt(val) || 2000;
+  saveWaterData();
+  renderWaterTab();
+}
+
+function renderWaterTab() {
+  const total = getTodayTotal();
+  const pct = Math.min(100, Math.round((total / waterGoal) * 100));
+  const remain = Math.max(0, waterGoal - total);
+  const color = pct >= 100 ? '#6B9E78' : pct >= 60 ? '#C8845A' : '#64B5F6';
+
+  // Update goal input
+  const gi = document.getElementById('water-goal-input');
+  if (gi && gi !== document.activeElement) gi.value = waterGoal;
+
+  // Update total display
+  const td = document.getElementById('water-total-display');
+  if (td) { td.textContent = total.toLocaleString() + ' мл'; td.style.color = color; }
+
+  const rd = document.getElementById('water-remain-display');
+  if (rd) rd.textContent = pct >= 100 ? '🎉 Норма выполнена!' : 'Осталось ' + remain.toLocaleString() + ' мл';
+
+  // Progress bar
+  const pb = document.getElementById('water-progress-bar');
+  if (pb) { pb.style.width = pct + '%'; pb.style.background = color; }
+
+  // SVG glass
+  const fillH = Math.min(154, Math.round((pct / 100) * 154));
+  const fillY = 172 - fillH;
+  const rect = document.getElementById('water-fill-rect');
+  if (rect) {
+    rect.setAttribute('y', fillY);
+    rect.setAttribute('height', fillH + 20);
+    rect.setAttribute('fill', color);
+  }
+  const wave = document.getElementById('water-wave');
+  if (wave && pct > 0 && pct < 100) {
+    wave.setAttribute('d', `M0 ${fillY} Q25 ${fillY-6} 50 ${fillY} Q75 ${fillY+6} 100 ${fillY}`);
+  } else if (wave) { wave.setAttribute('d', ''); }
+  const pctText = document.getElementById('water-pct-text');
+  if (pctText) pctText.textContent = pct + '%';
+
+  // Log list
+  const logs = getTodayLogs().reverse();
+  const logList = document.getElementById('water-log-list');
+  if (logList) {
+    if (!logs.length) {
+      logList.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:30px;font-size:14px">Ещё нет записей. Выпей воды! 💧</div>';
+    } else {
+      logList.innerHTML = logs.map(l => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--beige);border-radius:8px;font-size:13px">
+          <span>💧 <strong>${l.amount} мл</strong></span>
+          <span style="color:var(--text-muted);font-size:11px">${l.time}</span>
+          <button onclick="removeWaterLog(${l.id})" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px">✕</button>
+        </div>
+      `).join('');
+    }
+  }
+
+  // History chart (last 7 days)
+  renderWaterHistoryChart();
+}
+
+function renderWaterHistoryChart() {
+  const chart = document.getElementById('water-history-chart');
+  if (!chart) return;
+  const days = 7;
+  const data = [];
+  for (let i = days-1; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(0,10);
+    const total = waterLogs.filter(l => l.date === dateStr).reduce((s,l) => s+l.amount, 0);
+    data.push({ label: d.toLocaleDateString('ru',{weekday:'short'}), value: total });
+  }
+  const maxV = Math.max(...data.map(d=>d.value), waterGoal);
+  chart.innerHTML = data.map(d => `
+    <div class="bar-wrap">
+      <div class="bar-val">${d.value > 0 ? Math.round(d.value/100)*100 : ''}</div>
+      <div class="bar" style="height:${Math.max(4,(d.value/maxV)*80)}px;background:${d.value>=waterGoal?'#6B9E78':'#64B5F6'};opacity:0.75"></div>
+      <div class="bar-date">${d.label}</div>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// 🏋️ FITNESS TRACKER
+// ══════════════════════════════════════════════════════════════
+const DEFAULT_WORKOUT_TYPES = [
+  {id:'legs',    name:'Ноги',      color:'#E57373'},
+  {id:'arms',    name:'Руки',      color:'#64B5F6'},
+  {id:'cardio',  name:'Кардио',    color:'#81C784'},
+  {id:'back',    name:'Спина',     color:'#FFB74D'},
+  {id:'glutes',  name:'Ягодицы',   color:'#BA68C8'},
+  {id:'fullbody',name:'Full Body', color:'#4DB6AC'},
+];
+
+const DEFAULT_EXERCISES = [
+  {id:'e1',  typeId:'legs',    name:'Присед со штангой',      sets:4, reps:'8-12'},
+  {id:'e2',  typeId:'legs',    name:'Жим ногами',             sets:3, reps:'12-15'},
+  {id:'e3',  typeId:'legs',    name:'Выпады',                 sets:3, reps:'10'},
+  {id:'e4',  typeId:'legs',    name:'Разгибание ног',         sets:3, reps:'15'},
+  {id:'e5',  typeId:'arms',    name:'Подъём на бицепс',       sets:3, reps:'12'},
+  {id:'e6',  typeId:'arms',    name:'Трицепс на блоке',       sets:3, reps:'12-15'},
+  {id:'e7',  typeId:'arms',    name:'Молотковые сгибания',    sets:3, reps:'10'},
+  {id:'e8',  typeId:'cardio',  name:'Бег на дорожке',         sets:1, reps:'30 мин'},
+  {id:'e9',  typeId:'cardio',  name:'Велотренажёр',           sets:1, reps:'20 мин'},
+  {id:'e10', typeId:'cardio',  name:'Скакалка',               sets:3, reps:'5 мин'},
+  {id:'e11', typeId:'back',    name:'Становая тяга',          sets:4, reps:'6-8'},
+  {id:'e12', typeId:'back',    name:'Тяга верхнего блока',    sets:3, reps:'10-12'},
+  {id:'e13', typeId:'glutes',  name:'Ягодичный мостик',       sets:4, reps:'15'},
+  {id:'e14', typeId:'glutes',  name:'Румынская тяга',         sets:3, reps:'12'},
+  {id:'e15', typeId:'glutes',  name:'Отведение ноги в блоке', sets:3, reps:'15'},
+  {id:'e16', typeId:'fullbody',name:'Бёрпи',                  sets:3, reps:'10'},
+  {id:'e17', typeId:'fullbody',name:'Турецкий подъём',        sets:3, reps:'5'},
+];
+
+let workoutTypes    = JSON.parse(localStorage.getItem('workoutTypes')    || 'null') || [...DEFAULT_WORKOUT_TYPES];
+let exercises       = JSON.parse(localStorage.getItem('exercises')       || 'null') || [...DEFAULT_EXERCISES];
+let fitnessSessions = JSON.parse(localStorage.getItem('fitnessSessions') || '[]');
+let selectedFitType = null;
+let pickedExercises = []; // [{exId, sets, reps, weight}]
+
+function saveFitnessData() {
+  localStorage.setItem('workoutTypes',    JSON.stringify(workoutTypes));
+  localStorage.setItem('exercises',       JSON.stringify(exercises));
+  localStorage.setItem('fitnessSessions', JSON.stringify(fitnessSessions));
+}
+
+function initFitnessData() { /* already loaded above */ }
+
+function renderFitnessTab() {
+  renderTypePills();
+  renderExercisesList();
+  renderFitSessionsList();
+  renderExercisePicker();
+  populateTypeSelects();
+  const today = new Date().toISOString().slice(0,10);
+  const fitDate = document.getElementById('fit-date');
+  if (fitDate && !fitDate.value) fitDate.value = today;
+}
+
+function renderTypePills() {
+  const el = document.getElementById('fitness-type-pills');
+  if (!el) return;
+  el.innerHTML = workoutTypes.map(t => `
+    <div style="display:inline-flex;align-items:center;gap:4px">
+      <button onclick="selectFitType('${t.id}')" style="padding:7px 16px;border-radius:20px;border:none;cursor:pointer;
+        background:${selectedFitType===t.id ? t.color : 'var(--beige-deep)'};
+        color:${selectedFitType===t.id ? '#fff' : 'var(--text)'};
+        font-family:DM Sans,sans-serif;font-size:13px;font-weight:${selectedFitType===t.id?'600':'400'};transition:all .2s">
+        ${t.name}
+      </button>
+      ${!DEFAULT_WORKOUT_TYPES.find(d=>d.id===t.id) ? `<button onclick="deleteWorkoutType('${t.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:12px">✕</button>` : ''}
+    </div>
+  `).join('');
+}
+
+function selectFitType(id) {
+  selectedFitType = selectedFitType === id ? null : id;
+  renderTypePills();
+  renderExercisesList();
+  renderExercisePicker();
+}
+
+function toggleTypeForm() {
+  const el = document.getElementById('type-form-wrap');
+  el.classList.toggle('hidden');
+  el.style.display = el.classList.contains('hidden') ? 'none' : 'flex';
+}
+
+function addWorkoutType() {
+  const name = document.getElementById('new-type-name').value.trim();
+  const color = document.getElementById('new-type-color').value;
+  if (!name) return;
+  const id = 'wt_' + Date.now();
+  workoutTypes.push({id, name, color});
+  saveFitnessData();
+  document.getElementById('new-type-name').value = '';
+  toggleTypeForm();
+  renderFitnessTab();
+  showToast('✅ Тип добавлен: ' + name);
+}
+
+function deleteWorkoutType(id) {
+  if (!confirm('Удалить этот тип тренировок?')) return;
+  workoutTypes = workoutTypes.filter(t => t.id !== id);
+  saveFitnessData();
+  renderFitnessTab();
+}
+
+function renderExercisesList() {
+  const el = document.getElementById('exercises-list');
+  if (!el) return;
+  let list = exercises;
+  if (selectedFitType) list = list.filter(e => e.typeId === selectedFitType);
+  if (!list.length) {
+    el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;font-size:13px">Нет упражнений. Добавь!</div>';
+    return;
+  }
+  el.innerHTML = list.map(ex => {
+    const type = workoutTypes.find(t => t.id === ex.typeId);
+    return `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--beige);border-radius:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:8px;height:8px;border-radius:50%;background:${type?.color||'#C8845A'};flex-shrink:0"></div>
+        <div>
+          <div style="font-weight:500;font-size:14px">${ex.name}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${ex.sets ? ex.sets+' сета' : ''} ${ex.reps ? '× '+ex.reps : ''} ${type ? '· '+type.name : ''}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px">
+        ${!DEFAULT_EXERCISES.find(d=>d.id===ex.id) ? `<button onclick="deleteExercise('${ex.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted)">✕</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderExercisePicker() {
+  const el = document.getElementById('fit-exercises-picker');
+  if (!el) return;
+  let list = exercises;
+  if (selectedFitType) list = list.filter(e => e.typeId === selectedFitType);
+  if (!list.length) { el.innerHTML = '<span style="font-size:13px;color:var(--text-muted)">Выбери тип тренировки чтобы увидеть упражнения</span>'; return; }
+  el.innerHTML = list.map(ex => {
+    const picked = pickedExercises.find(p => p.exId === ex.id);
+    return `<button onclick="togglePickExercise('${ex.id}')" style="padding:7px 14px;border-radius:20px;border:1px solid ${picked?'var(--warm)':'var(--border)'};
+      background:${picked?'var(--warm-pale)':'var(--beige-card)'};cursor:pointer;font-size:12px;font-family:DM Sans,sans-serif;transition:all .2s">
+      ${picked?'✓ ':''} ${ex.name}
+    </button>`;
+  }).join('');
+  renderSelectedExercises();
+}
+
+function togglePickExercise(exId) {
+  const idx = pickedExercises.findIndex(p => p.exId === exId);
+  if (idx >= 0) pickedExercises.splice(idx, 1);
+  else { const ex = exercises.find(e=>e.id===exId); pickedExercises.push({exId, sets:ex?.sets||'', reps:ex?.reps||'', weight:''}); }
+  renderExercisePicker();
+}
+
+function renderSelectedExercises() {
+  const el = document.getElementById('fit-selected-exercises');
+  if (!el || !pickedExercises.length) { if(el) el.innerHTML=''; return; }
+  el.innerHTML = pickedExercises.map((p,i) => {
+    const ex = exercises.find(e=>e.id===p.exId);
+    return `<div style="display:flex;gap:8px;align-items:center;padding:8px 12px;background:var(--beige);border-radius:8px;flex-wrap:wrap">
+      <span style="flex:2;min-width:120px;font-size:13px;font-weight:500">${ex?.name||'?'}</span>
+      <input type="number" placeholder="Сетов" value="${p.sets}" min="1"
+        onchange="pickedExercises[${i}].sets=this.value"
+        style="width:70px;padding:4px 8px;font-size:12px;border-radius:6px;border:1px solid var(--border)"/>
+      <input type="text" placeholder="Повт." value="${p.reps}"
+        onchange="pickedExercises[${i}].reps=this.value"
+        style="width:70px;padding:4px 8px;font-size:12px;border-radius:6px;border:1px solid var(--border)"/>
+      <input type="number" placeholder="кг" value="${p.weight}" min="0" step="0.5"
+        onchange="pickedExercises[${i}].weight=this.value"
+        style="width:60px;padding:4px 8px;font-size:12px;border-radius:6px;border:1px solid var(--border)"/>
+    </div>`;
+  }).join('');
+}
+
+function toggleFitnessForm() {
+  const el = document.getElementById('fitness-form-wrap');
+  el.classList.toggle('hidden');
+  pickedExercises = [];
+  renderExercisePicker();
+}
+
+function toggleExerciseForm() {
+  const el = document.getElementById('exercise-form-wrap');
+  el.classList.toggle('hidden');
+}
+
+function populateTypeSelects() {
+  ['fit-type-sel','new-ex-type'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = workoutTypes.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+  });
+  const fitTypeSel = document.getElementById('fit-type-sel');
+  if (fitTypeSel && selectedFitType) fitTypeSel.value = selectedFitType;
+}
+
+function addExercise() {
+  const name = document.getElementById('new-ex-name').value.trim();
+  if (!name) return;
+  const typeId = document.getElementById('new-ex-type').value;
+  const sets = parseInt(document.getElementById('new-ex-sets').value) || null;
+  const reps = document.getElementById('new-ex-reps').value.trim() || null;
+  exercises.push({ id: 'ex_'+Date.now(), typeId, name, sets, reps });
+  saveFitnessData();
+  document.getElementById('new-ex-name').value = '';
+  document.getElementById('new-ex-sets').value = '';
+  document.getElementById('new-ex-reps').value = '';
+  toggleExerciseForm();
+  renderFitnessTab();
+  showToast('✅ Упражнение добавлено');
+}
+
+function deleteExercise(id) {
+  exercises = exercises.filter(e => e.id !== id);
+  saveFitnessData();
+  renderFitnessTab();
+}
+
+function saveFitnessSession() {
+  const typeId = document.getElementById('fit-type-sel').value;
+  const date = document.getElementById('fit-date').value;
+  const duration = parseInt(document.getElementById('fit-duration').value) || null;
+  const calories = parseInt(document.getElementById('fit-calories').value) || null;
+  const notes = document.getElementById('fit-notes').value.trim();
+  if (!typeId || !date) { showToast('⚠ Выбери тип и дату'); return; }
+  const type = workoutTypes.find(t=>t.id===typeId);
+  fitnessSessions.unshift({
+    id: 'fs_'+Date.now(), typeId, typeName: type?.name||'', typeColor: type?.color||'#C8845A',
+    date, duration, calories, notes,
+    exDone: [...pickedExercises.map(p=>({...p, exName: exercises.find(e=>e.id===p.exId)?.name||''}))],
+    createdAt: new Date().toISOString()
+  });
+  saveFitnessData();
+  pickedExercises = [];
+  toggleFitnessForm();
+  renderFitnessTab();
+  showToast('💪 Тренировка сохранена!');
+}
+
+function deleteFitnessSession(id) {
+  fitnessSessions = fitnessSessions.filter(s => s.id !== id);
+  saveFitnessData();
+  renderFitnessTab();
+}
+
+function renderFitSessionsList() {
+  const el = document.getElementById('fitness-sessions-list');
+  if (!el) return;
+  if (!fitnessSessions.length) {
+    el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:40px;font-size:14px">Тренировок пока нет. Добавь первую! 💪</div>';
+    return;
+  }
+  el.innerHTML = fitnessSessions.slice(0,20).map(s => `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:14px 16px;background:var(--beige);border-radius:12px">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="width:10px;height:10px;border-radius:50%;background:${s.typeColor};margin-top:5px;flex-shrink:0"></div>
+        <div>
+          <div style="font-weight:600;font-size:14px">${s.typeName}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">
+            ${new Date(s.date+'T12:00:00').toLocaleDateString('ru',{day:'numeric',month:'long'})}
+            ${s.duration ? ' · '+s.duration+' мин' : ''}
+            ${s.calories ? ' · 🔥 '+s.calories+' ккал' : ''}
+          </div>
+          ${s.notes ? `<div style="font-size:12px;color:var(--text-muted);margin-top:3px;font-style:italic">${s.notes}</div>` : ''}
+          ${s.exDone?.length ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px">${s.exDone.map(e=>e.exName).join(', ')}</div>` : ''}
+        </div>
+      </div>
+      <button onclick="deleteFitnessSession('${s.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px">✕</button>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// 📊 BODY ANALYTICS
+// ══════════════════════════════════════════════════════════════
+let bodyMetrics   = JSON.parse(localStorage.getItem('bodyMetrics')   || '[]');
+let progressPhotos = JSON.parse(localStorage.getItem('progressPhotos') || '[]');
+
+function saveBodyData() {
+  localStorage.setItem('bodyMetrics',    JSON.stringify(bodyMetrics));
+  localStorage.setItem('progressPhotos', JSON.stringify(progressPhotos));
+}
+
+function toggleBodyForm() {
+  const el = document.getElementById('body-form-wrap');
+  el.classList.toggle('hidden');
+}
+
+function togglePhotoForm() {
+  const el = document.getElementById('photo-form-wrap');
+  el.classList.toggle('hidden');
+}
+
+function saveBodyMetric() {
+  const date   = document.getElementById('body-date').value;
+  const weight = parseFloat(document.getElementById('body-weight').value) || null;
+  const fat    = parseFloat(document.getElementById('body-fat').value) || null;
+  const muscle = parseFloat(document.getElementById('body-muscle').value) || null;
+  const notes  = document.getElementById('body-notes').value.trim();
+  if (!date) { showToast('⚠ Укажи дату'); return; }
+  // Upsert by date
+  const idx = bodyMetrics.findIndex(m => m.date === date);
+  const entry = { id: 'bm_'+Date.now(), date, weight, fat, muscle, notes, createdAt: new Date().toISOString() };
+  if (idx >= 0) bodyMetrics[idx] = {...bodyMetrics[idx], ...entry};
+  else bodyMetrics.push(entry);
+  bodyMetrics.sort((a,b) => a.date.localeCompare(b.date));
+  saveBodyData();
+  toggleBodyForm();
+  renderBodyTab();
+  showToast('✅ Замер сохранён');
+}
+
+function deleteBodyMetric(id) {
+  bodyMetrics = bodyMetrics.filter(m => m.id !== id);
+  saveBodyData();
+  renderBodyTab();
+}
+
+function saveProgressPhoto() {
+  const date  = document.getElementById('photo-date').value;
+  const url   = document.getElementById('photo-url').value.trim();
+  const type  = document.getElementById('photo-type').value;
+  const notes = document.getElementById('photo-notes').value.trim();
+  if (!date) { showToast('⚠ Укажи дату'); return; }
+  progressPhotos.unshift({ id: 'pp_'+Date.now(), date, url, type, notes, createdAt: new Date().toISOString() });
+  saveBodyData();
+  document.getElementById('photo-url').value = '';
+  document.getElementById('photo-notes').value = '';
+  togglePhotoForm();
+  renderBodyTab();
+  showToast('📸 Фото добавлено');
+}
+
+function deleteProgressPhoto(id) {
+  progressPhotos = progressPhotos.filter(p => p.id !== id);
+  saveBodyData();
+  renderBodyTab();
+}
+
+function renderBodyTab() {
+  const latest = bodyMetrics[bodyMetrics.length - 1];
+  const first  = bodyMetrics[0];
+
+  // Stat cards
+  const cards = document.getElementById('body-stat-cards');
+  if (cards) {
+    const delta = (key) => {
+      if (!latest || !first || latest === first) return '';
+      const d = ((latest[key]||0) - (first[key]||0));
+      if (!d) return '';
+      const good = key === 'fat' ? d < 0 : d > 0;
+      return `<span style="font-size:12px;color:${good?'#6B9E78':'#C0504D'};margin-left:6px">${d>0?'+':''}${d.toFixed(1)}</span>`;
+    };
+    cards.innerHTML = [
+      {icon:'⚖️', label:'Вес', val: latest?.weight ? latest.weight+' кг' : '—', color:'#C8845A', dk: 'weight'},
+      {icon:'🔥', label:'% жира', val: latest?.fat ? latest.fat+'%' : '—', color:'#E57373', dk:'fat'},
+      {icon:'💪', label:'Мышцы', val: latest?.muscle ? latest.muscle+' кг' : '—', color:'#6B9E78', dk:'muscle'},
+      {icon:'📅', label:'Замеров', val: String(bodyMetrics.length), color:'#64B5F6', dk:null},
+    ].map(s => `
+      <div class="stat-card">
+        <div style="font-size:22px">${s.icon}</div>
+        <div class="stat-val" style="color:${s.color}">${s.val}${s.dk?delta(s.dk):''}</div>
+        <div class="stat-lbl">${s.label}</div>
+      </div>
+    `).join('');
+  }
+
+  // Mini bar charts
+  renderBodyMiniChart('body-weight-chart', bodyMetrics.map(m=>({label:m.date.slice(5),value:m.weight||0})), '#C8845A');
+  renderBodyMiniChart('body-muscle-chart', bodyMetrics.map(m=>({label:m.date.slice(5),value:m.muscle||0})), '#6B9E78');
+  renderBodyMiniChart('body-fat-chart',    bodyMetrics.map(m=>({label:m.date.slice(5),value:m.fat||0})),    '#E57373');
+
+  // Table
+  const tbody = document.getElementById('body-metrics-tbody');
+  if (tbody) {
+    if (!bodyMetrics.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="padding:30px;text-align:center;color:var(--text-muted)">Замеров пока нет</td></tr>';
+    } else {
+      tbody.innerHTML = [...bodyMetrics].reverse().map(m => `
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:10px">${new Date(m.date+'T12:00:00').toLocaleDateString('ru',{day:'numeric',month:'short',year:'2-digit'})}</td>
+          <td style="padding:10px;font-weight:600">${m.weight ? m.weight+' кг' : '—'}</td>
+          <td style="padding:10px">${m.fat ? m.fat+'%' : '—'}</td>
+          <td style="padding:10px">${m.muscle ? m.muscle+' кг' : '—'}</td>
+          <td style="padding:10px;color:var(--text-muted);font-style:italic">${m.notes||'—'}</td>
+          <td style="padding:10px"><button onclick="deleteBodyMetric('${m.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:13px">✕</button></td>
+        </tr>
+      `).join('');
+    }
+  }
+
+  // Photos
+  const grid = document.getElementById('progress-photos-grid');
+  if (grid) {
+    if (!progressPhotos.length) {
+      grid.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:30px;font-size:14px;grid-column:1/-1">Добавь первое фото прогресса 📸</div>';
+    } else {
+      grid.innerHTML = progressPhotos.map(p => `
+        <div style="border-radius:12px;overflow:hidden;border:1px solid var(--border);position:relative">
+          ${p.url
+            ? `<img src="${p.url}" alt="photo" style="width:100%;height:200px;object-fit:cover;display:block" onerror="this.style.display='none'">`
+            : `<div style="width:100%;height:200px;background:var(--beige-deep);display:flex;align-items:center;justify-content:center;font-size:40px">📷</div>`}
+          <div style="padding:10px 12px">
+            <div style="font-size:11px;color:var(--warm);font-weight:600;margin-bottom:2px">
+              ${p.type==='before'?'⬅️ До':p.type==='after'?'✅ После':'📷 Прогресс'}
+            </div>
+            <div style="font-size:11px;color:var(--text-muted)">${new Date(p.date+'T12:00:00').toLocaleDateString('ru',{day:'numeric',month:'long',year:'numeric'})}</div>
+            ${p.notes ? `<div style="font-size:11px;margin-top:4px;font-style:italic">${p.notes}</div>` : ''}
+          </div>
+          <button onclick="deleteProgressPhoto('${p.id}')" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.45);border:none;border-radius:50%;width:24px;height:24px;color:#fff;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center">✕</button>
+        </div>
+      `).join('');
+    }
+  }
+}
+
+function renderBodyMiniChart(id, data, color) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const relevant = data.filter(d=>d.value>0);
+  if (!relevant.length) { el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;font-size:12px">Нет данных</div>'; return; }
+  const maxV = Math.max(...relevant.map(d=>d.value));
+  const show = relevant.slice(-10);
+  el.innerHTML = show.map(d => `
+    <div class="bar-wrap">
+      <div class="bar-val" style="color:${color}">${d.value}</div>
+      <div class="bar" style="height:${Math.max(4,(d.value/maxV)*70)}px;background:${color};opacity:0.7"></div>
+      <div class="bar-date">${d.label}</div>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// 📅 REPORTS
+// ══════════════════════════════════════════════════════════════
+let reportPeriod = 'week';
+
+function setReportPeriod(p) {
+  reportPeriod = p;
+  document.getElementById('rep-week-btn').className  = p==='week'  ? 'btn btn-primary btn-sm'   : 'btn btn-secondary btn-sm';
+  document.getElementById('rep-month-btn').className = p==='month' ? 'btn btn-primary btn-sm'   : 'btn btn-secondary btn-sm';
+  renderReports();
+}
+
+function getDateRange(days) {
+  const dates = [];
+  for (let i = days-1; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    dates.push(d.toISOString().slice(0,10));
+  }
+  return dates;
+}
+
+function renderReports() {
+  const days = reportPeriod === 'week' ? 7 : 30;
+  const range = getDateRange(days);
+  const startDate = range[0];
+
+  // Filter data by period
+  const periodWaterLogs = waterLogs.filter(l => l.date >= startDate);
+  const periodSessions  = fitnessSessions.filter(s => s.date >= startDate);
+
+  const totalWater    = periodWaterLogs.reduce((s,l) => s+l.amount, 0);
+  const totalWorkouts = periodSessions.length;
+  const totalCalories = periodSessions.reduce((s,w) => s+(w.calories||0), 0);
+  const activeDays    = new Set(periodSessions.map(s=>s.date)).size;
+  const avgWater      = periodWaterLogs.length ? Math.round(totalWater / [...new Set(periodWaterLogs.map(l=>l.date))].length) : 0;
+
+  // Stat cards
+  const sc = document.getElementById('report-stat-cards');
+  if (sc) sc.innerHTML = [
+    {icon:'💧', label:'Вода (всего)',   val:`${(totalWater/1000).toFixed(1)} л`,    sub:`в среднем ${avgWater} мл/день`, color:'#64B5F6'},
+    {icon:'🏋️', label:'Тренировок',    val:String(totalWorkouts),                   sub:`за ${days} дней`,               color:'#C8845A'},
+    {icon:'🔥', label:'Ккал сожжено',  val:totalCalories||'—',                      sub:'за период',                     color:'#E57373'},
+    {icon:'📊', label:'Активных дней', val:String(activeDays),                      sub:'с тренировкой',                  color:'#6B9E78'},
+  ].map(s=>`
+    <div class="stat-card">
+      <div style="font-size:22px">${s.icon}</div>
+      <div class="stat-val" style="color:${s.color}">${s.val}</div>
+      <div class="stat-lbl">${s.label}</div>
+      <div style="font-size:11px;color:var(--text-light);margin-top:2px">${s.sub}</div>
+    </div>
+  `).join('');
+
+  // Water chart
+  const waterMap = {};
+  periodWaterLogs.forEach(l => { waterMap[l.date] = (waterMap[l.date]||0) + l.amount; });
+  const waterChartData = range.map(d => ({
+    label: new Date(d+'T12:00:00').toLocaleDateString('ru', reportPeriod==='week'?{weekday:'short'}:{day:'numeric'}),
+    value: waterMap[d] || 0
+  }));
+  renderReportChart('report-water-chart', waterChartData, '#64B5F6', waterGoal);
+
+  // Workout chart
+  const workoutMap = {};
+  periodSessions.forEach(s => { workoutMap[s.date] = (workoutMap[s.date]||0) + 1; });
+  const workoutChartData = range.map(d => ({
+    label: new Date(d+'T12:00:00').toLocaleDateString('ru', reportPeriod==='week'?{weekday:'short'}:{day:'numeric'}),
+    value: workoutMap[d] || 0
+  }));
+  renderReportChart('report-workout-chart', workoutChartData, '#C8845A', 1);
+
+  // Type breakdown
+  const typeMap = {};
+  periodSessions.forEach(s => {
+    if (!typeMap[s.typeName]) typeMap[s.typeName] = {count:0, color:s.typeColor};
+    typeMap[s.typeName].count++;
+  });
+  const breakdown = document.getElementById('report-type-breakdown');
+  if (breakdown) {
+    if (!Object.keys(typeMap).length) {
+      breakdown.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;font-size:14px">Нет тренировок за период</div>';
+    } else {
+      breakdown.innerHTML = Object.entries(typeMap).sort((a,b)=>b[1].count-a[1].count).map(([name,{count,color}]) => `
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0"></div>
+          <div style="flex:1;font-size:14px">${name}</div>
+          <div style="width:40%"><div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div style="height:100%;background:${color};border-radius:3px;width:${Math.round((count/totalWorkouts)*100)}%;transition:width 0.5s"></div>
+          </div></div>
+          <div style="font-size:13px;font-weight:600;color:var(--text-muted);min-width:30px;text-align:right">${count}×</div>
+        </div>
+      `).join('');
+    }
+  }
+
+  // Sessions list
+  const sl = document.getElementById('report-sessions-list');
+  if (sl) {
+    if (!periodSessions.length) {
+      sl.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:30px;font-size:14px">Нет тренировок за этот период</div>';
+    } else {
+      sl.innerHTML = periodSessions.slice(0,15).map(s => `
+        <div style="display:flex;gap:12px;align-items:center;padding:10px 14px;background:var(--beige);border-radius:10px;margin-bottom:8px">
+          <div style="width:8px;height:8px;border-radius:50%;background:${s.typeColor};flex-shrink:0"></div>
+          <div style="flex:1;font-size:13px;font-weight:500">${s.typeName}</div>
+          <div style="font-size:12px;color:var(--text-muted)">${new Date(s.date+'T12:00:00').toLocaleDateString('ru',{day:'numeric',month:'short'})}${s.duration?' · '+s.duration+' мин':''}</div>
+          ${s.calories ? `<div style="font-size:12px;color:#E57373;font-weight:600">🔥 ${s.calories}</div>` : ''}
+        </div>
+      `).join('');
+    }
+  }
+}
+
+function renderReportChart(id, data, color, threshold) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const maxV = Math.max(...data.map(d=>d.value), threshold, 1);
+  el.innerHTML = data.map(d => `
+    <div class="bar-wrap">
+      <div class="bar-val">${d.value > 0 ? d.value : ''}</div>
+      <div class="bar" style="height:${Math.max(d.value>0?4:2,(d.value/maxV)*100)}px;background:${d.value>=threshold?'#6B9E78':color};opacity:${d.value>0?'0.75':'0.15'}"></div>
+      <div class="bar-date">${d.label}</div>
+    </div>
+  `).join('');
+}
 </script>
 <div class="toast" id="app-toast"></div>
 </body>
