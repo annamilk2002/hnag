@@ -42,6 +42,7 @@
           profile:    JSON.stringify(window._profile    || {}),
           countries:  JSON.stringify(window._countries  || []),
           categories: JSON.stringify(window._categories || []),
+          journal:    JSON.stringify(window._journal    || []),
         });
       } catch(e) { console.error('Firestore save error:', e); }
     };
@@ -57,6 +58,7 @@
             profile:    JSON.parse(d.profile    || '{}'),
             countries:  JSON.parse(d.countries  || '[]'),
             categories: JSON.parse(d.categories || '[]'),
+            journal:    JSON.parse(d.journal    || '[]'),
           };
         }
       } catch(e) { console.error('Firestore load error:', e); }
@@ -85,6 +87,7 @@
           window._profile    = data.profile?.name      ? data.profile    : window._profile;
           window._countries  = data.countries?.length  ? data.countries  : window._countries;
           if (data.categories?.length) window._categories = data.categories;
+          if (data.journal?.length)    window._journal    = data.journal;
           if (typeof window.applyFirestoreData === 'function') window.applyFirestoreData();
         }
         showSyncStatus('synced');
@@ -615,6 +618,54 @@
     .nut-summary { grid-template-columns: repeat(2,1fr); }
     .day-nut-bar { grid-template-columns: repeat(2,1fr); }
   }
+  /* ══ JOURNAL ══ */
+  .journal-card {
+    border-radius: var(--radius); padding: 20px 22px; margin-bottom: 16px;
+    border: 1px solid var(--border); position: relative; transition: box-shadow .2s, transform .2s;
+    cursor: pointer;
+  }
+  .journal-card:hover { box-shadow: var(--shadow); transform: translateY(-2px); }
+  .journal-card.pinned { border-left: 4px solid var(--warm); }
+  .journal-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 8px; }
+  .journal-card-date { font-size: 11px; color: var(--text-muted); font-weight: 600; letter-spacing: .4px; }
+  .journal-card-mood { font-size: 20px; }
+  .journal-card-title { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--warm-dark); margin-bottom: 6px; font-weight: 700; }
+  .journal-card-preview { font-size: 13px; color: var(--text-muted); line-height: 1.6; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+  .journal-card-footer { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
+  .journal-tag { padding: 3px 10px; border-radius: 20px; font-size: 11px; background: var(--beige-deep); color: var(--text-muted); font-weight: 600; }
+  .journal-card-photos { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .journal-thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
+  .journal-pin-badge { font-size: 11px; color: var(--warm); font-weight: 700; }
+  .journal-card-actions { position: absolute; top: 12px; right: 12px; display: flex; gap: 5px; opacity: 0; transition: opacity .2s; }
+  .journal-card:hover .journal-card-actions { opacity: 1; }
+  .journal-week-col { background: var(--beige-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .journal-week-col-day { font-size: 11px; font-weight: 700; color: var(--warm-dark); letter-spacing: .5px; margin-bottom: 8px; }
+  .journal-week-mini { padding: 8px 10px; border-radius: 8px; background: var(--beige); margin-bottom: 8px; cursor: pointer; font-size: 12px; color: var(--text); border-left: 3px solid var(--warm); }
+  .journal-cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
+  .journal-cal-cell { min-height: 80px; border-radius: 8px; padding: 6px; border: 1px solid var(--border); background: var(--beige-card); }
+  .journal-cal-cell.today { border-color: var(--warm); background: var(--warm-pale); }
+  .journal-cal-cell.other-month { opacity: .45; }
+  .journal-cal-num { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; }
+  .journal-cal-dot { font-size: 10px; cursor: pointer; margin-bottom: 2px; line-height: 1.4; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .mood-btn { font-size: 22px; cursor: pointer; padding: 4px; border-radius: 8px; transition: transform .15s, background .15s; }
+  .mood-btn:hover { transform: scale(1.2); }
+  .mood-btn.selected { background: var(--warm-pale); border-radius: 8px; }
+  .color-chip { display: inline-block; width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: border-color .15s, transform .15s; }
+  .color-chip:hover { transform: scale(1.2); }
+  .color-chip.active { border-color: var(--warm); }
+  .rte-btn {
+    padding: 4px 8px; border-radius: 5px; border: 1px solid transparent;
+    cursor: pointer; font-size: 13px; font-family: inherit;
+    background: transparent; color: var(--text-muted); transition: all .15s;
+  }
+  .rte-btn:hover { background: var(--beige-card); border-color: var(--border); }
+  [id="jnote-content"]:empty:before { content: attr(placeholder); color: var(--text-light); pointer-events: none; }
+  .journal-month-week { display: grid; grid-template-columns: repeat(7,1fr); gap: 6px; margin-bottom: 6px; }
+  .journal-month-cell { min-height: 70px; border-radius: 8px; padding: 6px; border: 1px solid var(--border); background: var(--beige-card); cursor: pointer; }
+  .journal-month-cell:hover { border-color: var(--warm); }
+  .journal-month-cell.today { background: var(--warm-pale); border-color: var(--warm); }
+  .journal-month-cell.empty { background: transparent; border-color: transparent; cursor: default; }
+
 </style>
 </head>
 <body>
@@ -630,6 +681,7 @@
     <button class="nav-btn" onclick="showTab('fitness')" data-tab="fitness" id="nav-fitness">🏋️ Fitness</button>
     <button class="nav-btn" onclick="showTab('body')" data-tab="body" id="nav-body">📊 Body</button>
     <button class="nav-btn" onclick="showTab('reports')" data-tab="reports" id="nav-reports">📅 Reports</button>
+    <button class="nav-btn" onclick="showTab('journal')" data-tab="journal" id="nav-journal">📔 Journal</button>
     <button class="nav-btn" onclick="showTab('profile')" data-tab="profile" id="nav-profile">Profile</button>
   </nav>
   <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
@@ -1047,7 +1099,157 @@
     </div>
   </div>
 
+  <!-- ══ JOURNAL TAB ══ -->
+  <div id="tab-journal" class="hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+      <div>
+        <h1 class="hero-title" style="margin-bottom:4px">📔 My Journal</h1>
+        <p class="hero-sub" style="margin-bottom:0">Your private daily notes & diary</p>
+      </div>
+      <button class="btn btn-primary" onclick="openJournalModal()">+ New Note</button>
+    </div>
+
+    <!-- Search + filter bar -->
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+      <input type="text" id="journal-search" placeholder="🔍 Search notes..." style="flex:1;min-width:180px" oninput="renderJournal()"/>
+      <input type="date" id="journal-date-filter" style="width:160px" onchange="renderJournal()" title="Filter by date"/>
+      <button class="btn btn-secondary btn-sm" onclick="clearJournalFilters()">✕ Clear</button>
+    </div>
+
+    <!-- Tag filter pills -->
+    <div id="journal-tag-pills" class="pill-row" style="margin-bottom:18px"></div>
+
+    <!-- View tabs -->
+    <div class="view-tabs" style="margin-bottom:20px">
+      <button class="btn btn-primary btn-sm" id="jv-list"  onclick="setJournalView('list')">📋 List</button>
+      <button class="btn btn-secondary btn-sm" id="jv-week" onclick="setJournalView('week')">📅 Week</button>
+      <button class="btn btn-secondary btn-sm" id="jv-month" onclick="setJournalView('month')">🗓 Month</button>
+      <button class="btn btn-secondary btn-sm" id="jv-cal" onclick="setJournalView('calendar')">📆 Calendar</button>
+    </div>
+
+    <!-- Views -->
+    <div id="journal-view-list"></div>
+    <div id="journal-view-week" class="hidden"></div>
+    <div id="journal-view-month" class="hidden"></div>
+    <div id="journal-view-calendar" class="hidden"></div>
+  </div>
+
 </main>
+
+<!-- ══ JOURNAL NOTE MODAL ══ -->
+<div class="modal-overlay hidden" id="journal-modal" onclick="closeModalOnBg(event,'journal-modal')">
+  <div class="modal-box wide" style="max-width:760px">
+    <div class="modal-header">
+      <div class="modal-title" id="journal-modal-title">📔 New Note</div>
+      <button class="btn btn-secondary btn-sm" onclick="closeModal('journal-modal')">✕</button>
+    </div>
+
+    <input type="hidden" id="jnote-id"/>
+
+    <!-- Date + Mood row -->
+    <div class="grid-2 mb16">
+      <div>
+        <label>📅 Date</label>
+        <input type="date" id="jnote-date"/>
+      </div>
+      <div>
+        <label>😊 Mood of the day</label>
+        <div id="jnote-mood-picker" style="display:flex;gap:8px;flex-wrap:wrap;padding-top:4px">
+          <span class="mood-btn" data-mood="😄" onclick="selectMood('😄')" title="Happy">😄</span>
+          <span class="mood-btn" data-mood="🙂" onclick="selectMood('🙂')" title="Good">🙂</span>
+          <span class="mood-btn" data-mood="😐" onclick="selectMood('😐')" title="Neutral">😐</span>
+          <span class="mood-btn" data-mood="😔" onclick="selectMood('😔')" title="Sad">😔</span>
+          <span class="mood-btn" data-mood="😤" onclick="selectMood('😤')" title="Stressed">😤</span>
+          <span class="mood-btn" data-mood="😴" onclick="selectMood('😴')" title="Tired">😴</span>
+          <span class="mood-btn" data-mood="🤩" onclick="selectMood('🤩')" title="Excited">🤩</span>
+          <span class="mood-btn" data-mood="😰" onclick="selectMood('😰')" title="Anxious">😰</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Title -->
+    <div class="mb16">
+      <label>✏ Title</label>
+      <input type="text" id="jnote-title" placeholder="Give your note a title..."/>
+    </div>
+
+    <!-- Rich text editor toolbar -->
+    <div style="border:1px solid var(--border);border-radius:var(--radius-sm) var(--radius-sm) 0 0;padding:8px 10px;background:var(--beige-deep);display:flex;gap:4px;flex-wrap:wrap;align-items:center">
+      <button class="rte-btn" onclick="jfmt('bold')" title="Bold"><b>B</b></button>
+      <button class="rte-btn" onclick="jfmt('italic')" title="Italic"><i>I</i></button>
+      <button class="rte-btn" onclick="jfmt('underline')" title="Underline"><u>U</u></button>
+      <button class="rte-btn" onclick="jfmt('strikeThrough')" title="Strike">S̶</button>
+      <span style="width:1px;height:20px;background:var(--border);margin:0 4px"></span>
+      <button class="rte-btn" onclick="jfmtBlock('h2')" title="Heading 2">H2</button>
+      <button class="rte-btn" onclick="jfmtBlock('h3')" title="Heading 3">H3</button>
+      <button class="rte-btn" onclick="jfmtBlock('p')" title="Paragraph">¶</button>
+      <span style="width:1px;height:20px;background:var(--border);margin:0 4px"></span>
+      <button class="rte-btn" onclick="jfmt('insertUnorderedList')" title="Bullet list">• —</button>
+      <button class="rte-btn" onclick="jfmt('insertOrderedList')" title="Ordered list">1.</button>
+      <span style="width:1px;height:20px;background:var(--border);margin:0 4px"></span>
+      <button class="rte-btn" onclick="jfmt('justifyLeft')" title="Left">⬅</button>
+      <button class="rte-btn" onclick="jfmt('justifyCenter')" title="Center">⬌</button>
+      <button class="rte-btn" onclick="jfmt('justifyRight')" title="Right">➡</button>
+      <span style="width:1px;height:20px;background:var(--border);margin:0 4px"></span>
+      <select onchange="jfmtFont(this.value)" title="Font" style="height:28px;font-size:12px;padding:2px 6px;border-radius:6px;border:1px solid var(--border);background:#fff;cursor:pointer;width:auto">
+        <option value="DM Sans">DM Sans</option>
+        <option value="Playfair Display">Playfair</option>
+        <option value="Georgia">Georgia</option>
+        <option value="monospace">Mono</option>
+        <option value="cursive">Cursive</option>
+      </select>
+      <input type="color" id="rte-color" value="#3A2E28" onchange="jfmtColor(this.value)" title="Text color" style="width:28px;height:28px;border:none;border-radius:6px;cursor:pointer;padding:2px"/>
+    </div>
+    <!-- Editable content area -->
+    <div id="jnote-content" contenteditable="true" style="min-height:200px;border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);padding:14px 16px;font-size:14px;line-height:1.75;outline:none;background:#fff;color:var(--text)" placeholder="Write your thoughts..."></div>
+
+    <!-- Note color + tags -->
+    <div class="grid-2 mb16" style="margin-top:14px">
+      <div>
+        <label>🎨 Note colour</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;padding-top:4px">
+          <span class="color-chip active" data-color="#FDFAF5" style="background:#FDFAF5" onclick="selectNoteColor('#FDFAF5')" title="Default"></span>
+          <span class="color-chip" data-color="#FFF3E0" style="background:#FFF3E0" onclick="selectNoteColor('#FFF3E0')" title="Peach"></span>
+          <span class="color-chip" data-color="#E8F4EE" style="background:#E8F4EE" onclick="selectNoteColor('#E8F4EE')" title="Mint"></span>
+          <span class="color-chip" data-color="#E8EAF6" style="background:#E8EAF6" onclick="selectNoteColor('#E8EAF6')" title="Lavender"></span>
+          <span class="color-chip" data-color="#FCE4EC" style="background:#FCE4EC" onclick="selectNoteColor('#FCE4EC')" title="Rose"></span>
+          <span class="color-chip" data-color="#E0F2F1" style="background:#E0F2F1" onclick="selectNoteColor('#E0F2F1')" title="Sky"></span>
+          <span class="color-chip" data-color="#FFF8E1" style="background:#FFF8E1" onclick="selectNoteColor('#FFF8E1')" title="Lemon"></span>
+        </div>
+      </div>
+      <div>
+        <label>🏷 Tags (comma separated)</label>
+        <input type="text" id="jnote-tags" placeholder="gratitude, ideas, health"/>
+      </div>
+    </div>
+
+    <!-- Photo upload section -->
+    <div class="mb16">
+      <label>📸 Photos</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+        <label class="photo-label" style="cursor:pointer">
+          📎 Upload photo
+          <input type="file" accept="image/*" multiple style="display:none" onchange="handleJournalPhotos(event)"/>
+        </label>
+        <input type="text" id="jnote-photo-url" placeholder="Or paste image URL..." style="flex:1;min-width:180px"/>
+        <button class="btn btn-secondary btn-sm" onclick="addJournalPhotoUrl()">+ Add URL</button>
+      </div>
+      <div id="jnote-photos-preview" style="display:flex;gap:10px;flex-wrap:wrap"></div>
+    </div>
+
+    <!-- Pinned toggle -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+      <input type="checkbox" id="jnote-pinned" style="width:16px;height:16px;accent-color:var(--warm)"/>
+      <label for="jnote-pinned" style="margin:0;font-size:13px;color:var(--text-muted);text-transform:none;letter-spacing:0;cursor:pointer">📌 Pin this note</label>
+    </div>
+
+    <div class="flex-end">
+      <button class="btn btn-danger btn-sm" id="jnote-delete-btn" onclick="deleteJournalNote()" style="display:none">🗑 Delete</button>
+      <button class="btn btn-secondary" onclick="closeModal('journal-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveJournalNote()">💾 Save Note</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══ MODALS ══ -->
 
@@ -1348,6 +1550,7 @@ async function save() {
   window._profile    = profile;
   window._countries  = countries;
   window._categories = categories;
+  // journal is always managed via window._journal directly
   // Save to Firestore if logged in
   if (typeof window.firestoreSave === 'function') {
     window.showSyncStatus && window.showSyncStatus('saving');
@@ -1396,7 +1599,7 @@ function setLang(l) {
 // ─── TAB NAVIGATION ───────────────────────────────────────────────────────────
 function showTab(tab) {
   currentTab = tab;
-  const allTabs = ['recipes','mealplan','analytics','water','fitness','body','reports','profile'];
+  const allTabs = ['recipes','mealplan','analytics','water','fitness','body','reports','journal','profile'];
   allTabs.forEach(k => {
     const tabEl = document.getElementById('tab-'+k);
     const navEl = document.getElementById('nav-'+k);
@@ -1410,6 +1613,7 @@ function showTab(tab) {
   if (tab === 'fitness')   renderFitnessTab();
   if (tab === 'body')      renderBodyTab();
   if (tab === 'reports')   renderReports();
+  if (tab === 'journal')   renderJournal();
 }
 
 // ─── CATEGORY SYSTEM (dynamic) ────────────────────────────────────────────────
@@ -3269,7 +3473,420 @@ function renderReports() {
   }
 }
 
-function renderReportChart(id, data, color, threshold) {
+
+// ══════════════════════════════════════════════════════════════
+// 📔 DAILY JOURNAL
+// ══════════════════════════════════════════════════════════════
+
+window._journal = [];
+let journalNotes = window._journal;
+let journalView = 'list';
+let journalTagFilter = '';
+let journalSelectedMood = '';
+let journalSelectedColor = '#FDFAF5';
+let jnotePhotos = []; // [{url, name}]
+
+// Keep local array in sync with window
+function jSync() {
+  journalNotes = window._journal;
+}
+
+// ── CRUD ────────────────────────────────────────────────────────────────────
+
+function saveJournalNote() {
+  jSync();
+  const id       = document.getElementById('jnote-id').value;
+  const title    = document.getElementById('jnote-title').value.trim();
+  const content  = document.getElementById('jnote-content').innerHTML;
+  const date     = document.getElementById('jnote-date').value || todayStr();
+  const tagsRaw  = document.getElementById('jnote-tags').value;
+  const pinned   = document.getElementById('jnote-pinned').checked;
+
+  if (!title && content === '<br>') { showToast('⚠ Write a title or some content!'); return; }
+
+  const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
+
+  const note = {
+    id:      id || Date.now().toString(36) + Math.random().toString(36).slice(2),
+    title:   title || 'Untitled',
+    content,
+    date,
+    mood:    journalSelectedMood,
+    color:   journalSelectedColor,
+    tags,
+    photos:  [...jnotePhotos],
+    pinned,
+    created_at: id ? undefined : new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  if (id) {
+    const idx = window._journal.findIndex(n => n.id === id);
+    if (idx !== -1) {
+      note.created_at = window._journal[idx].created_at;
+      window._journal[idx] = note;
+    }
+  } else {
+    window._journal.unshift(note);
+  }
+
+  save();
+  closeModal('journal-modal');
+  renderJournal();
+  showToast('📔 Note saved!');
+}
+
+function deleteJournalNote() {
+  const id = document.getElementById('jnote-id').value;
+  if (!id) return;
+  if (!confirm('Delete this note?')) return;
+  window._journal = window._journal.filter(n => n.id !== id);
+  jSync();
+  save();
+  closeModal('journal-modal');
+  renderJournal();
+  showToast('🗑 Note deleted');
+}
+
+// ── MODAL OPEN/CLOSE ────────────────────────────────────────────────────────
+
+function openJournalModal(noteId) {
+  jSync();
+  journalSelectedMood  = '';
+  journalSelectedColor = '#FDFAF5';
+  jnotePhotos          = [];
+
+  document.getElementById('jnote-id').value           = '';
+  document.getElementById('jnote-title').value         = '';
+  document.getElementById('jnote-content').innerHTML   = '';
+  document.getElementById('jnote-date').value          = todayStr();
+  document.getElementById('jnote-tags').value          = '';
+  document.getElementById('jnote-pinned').checked      = false;
+  document.getElementById('jnote-delete-btn').style.display = 'none';
+  document.getElementById('journal-modal-title').textContent = '📔 New Note';
+  document.getElementById('jnote-photos-preview').innerHTML  = '';
+  document.getElementById('jnote-photo-url').value    = '';
+  renderMoodPicker();
+  renderColorChips();
+
+  if (noteId) {
+    const note = window._journal.find(n => n.id === noteId);
+    if (!note) return;
+    document.getElementById('jnote-id').value          = note.id;
+    document.getElementById('jnote-title').value        = note.title;
+    document.getElementById('jnote-content').innerHTML  = note.content;
+    document.getElementById('jnote-date').value         = note.date;
+    document.getElementById('jnote-tags').value         = (note.tags || []).join(', ');
+    document.getElementById('jnote-pinned').checked     = note.pinned;
+    document.getElementById('jnote-delete-btn').style.display = '';
+    document.getElementById('journal-modal-title').textContent = '✏ Edit Note';
+    journalSelectedMood  = note.mood  || '';
+    journalSelectedColor = note.color || '#FDFAF5';
+    jnotePhotos          = [...(note.photos || [])];
+    renderMoodPicker();
+    renderColorChips();
+    renderJnotePhotos();
+  }
+
+  openModal('journal-modal');
+}
+
+function renderMoodPicker() {
+  document.querySelectorAll('.mood-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.mood === journalSelectedMood);
+  });
+}
+
+function selectMood(m) {
+  journalSelectedMood = (journalSelectedMood === m) ? '' : m;
+  renderMoodPicker();
+}
+
+function renderColorChips() {
+  document.querySelectorAll('.color-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.color === journalSelectedColor);
+  });
+}
+
+function selectNoteColor(col) {
+  journalSelectedColor = col;
+  renderColorChips();
+}
+
+// ── RICH TEXT EDITOR ─────────────────────────────────────────────────────────
+
+function jfmt(cmd) {
+  document.getElementById('jnote-content').focus();
+  document.execCommand(cmd, false, null);
+}
+
+function jfmtBlock(tag) {
+  document.getElementById('jnote-content').focus();
+  document.execCommand('formatBlock', false, tag);
+}
+
+function jfmtFont(font) {
+  document.getElementById('jnote-content').focus();
+  document.execCommand('fontName', false, font);
+}
+
+function jfmtColor(color) {
+  document.getElementById('jnote-content').focus();
+  document.execCommand('foreColor', false, color);
+}
+
+// ── PHOTOS ───────────────────────────────────────────────────────────────────
+
+function handleJournalPhotos(e) {
+  const files = Array.from(e.target.files);
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      jnotePhotos.push({ url: ev.target.result, name: file.name });
+      renderJnotePhotos();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function addJournalPhotoUrl() {
+  const url = document.getElementById('jnote-photo-url').value.trim();
+  if (!url) return;
+  jnotePhotos.push({ url, name: 'image' });
+  document.getElementById('jnote-photo-url').value = '';
+  renderJnotePhotos();
+}
+
+function removeJnotePhoto(idx) {
+  jnotePhotos.splice(idx, 1);
+  renderJnotePhotos();
+}
+
+function renderJnotePhotos() {
+  const wrap = document.getElementById('jnote-photos-preview');
+  if (!jnotePhotos.length) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = jnotePhotos.map((p, i) => `
+    <div style="position:relative;display:inline-block">
+      <img src="${p.url}" alt="photo" style="width:80px;height:80px;object-fit:cover;border-radius:10px;border:1px solid var(--border);" onerror="this.style.background='var(--beige-deep)'"/>
+      <button onclick="removeJnotePhoto(${i})" style="position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+  `).join('');
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function fmtNoteDate(d) {
+  if (!d) return '';
+  return new Date(d + 'T12:00:00').toLocaleDateString('en', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function stripHtml(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+}
+
+function clearJournalFilters() {
+  document.getElementById('journal-search').value = '';
+  document.getElementById('journal-date-filter').value = '';
+  journalTagFilter = '';
+  renderJournal();
+}
+
+// ── VIEWS ────────────────────────────────────────────────────────────────────
+
+function setJournalView(v) {
+  journalView = v;
+  ['list','week','month','calendar'].forEach(k => {
+    const btn = document.getElementById('jv-' + (k === 'calendar' ? 'cal' : k));
+    const panel = document.getElementById('journal-view-' + k);
+    if (btn)   btn.className = k === v ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
+    if (panel) panel.classList.toggle('hidden', k !== v);
+  });
+  renderJournal();
+}
+
+function getFilteredNotes() {
+  jSync();
+  const search = (document.getElementById('journal-search')?.value || '').toLowerCase();
+  const dateF  = document.getElementById('journal-date-filter')?.value || '';
+  return window._journal.filter(n => {
+    if (search && !n.title.toLowerCase().includes(search) && !stripHtml(n.content).toLowerCase().includes(search)) return false;
+    if (dateF && n.date !== dateF) return false;
+    if (journalTagFilter && !(n.tags || []).includes(journalTagFilter)) return false;
+    return true;
+  });
+}
+
+function renderJournal() {
+  jSync();
+  renderJournalTagPills();
+  const notes = getFilteredNotes();
+
+  if (journalView === 'list')     renderJournalList(notes);
+  if (journalView === 'week')     renderJournalWeek(notes);
+  if (journalView === 'month')    renderJournalMonth(notes);
+  if (journalView === 'calendar') renderJournalCalendar(notes);
+}
+
+function renderJournalTagPills() {
+  const allTags = [...new Set(window._journal.flatMap(n => n.tags || []))];
+  const el = document.getElementById('journal-tag-pills');
+  if (!el) return;
+  el.innerHTML = `<span class="pill${!journalTagFilter?' active':''}" onclick="journalTagFilter='';renderJournal()">All</span>` +
+    allTags.map(t => `<span class="pill${journalTagFilter===t?' active':''}" onclick="journalTagFilter='${t}';renderJournal()">${t}</span>`).join('');
+}
+
+function noteCardHtml(note) {
+  const preview = stripHtml(note.content).slice(0, 180);
+  const tags    = (note.tags || []).map(t => `<span class="journal-tag">${t}</span>`).join('');
+  const photos  = (note.photos || []).slice(0, 3).map(p =>
+    `<img src="${p.url}" class="journal-thumb" onerror="this.style.display='none'">`).join('');
+  return `
+    <div class="journal-card" style="background:${note.color||'#FDFAF5'}" onclick="openJournalModal('${note.id}')">
+      <div class="journal-card-header">
+        <div>
+          ${note.pinned ? '<span class="journal-pin-badge">📌 Pinned</span><br>' : ''}
+          <div class="journal-card-date">${fmtNoteDate(note.date)}</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          ${note.mood ? `<span class="journal-card-mood">${note.mood}</span>` : ''}
+        </div>
+      </div>
+      <div class="journal-card-title">${note.title}</div>
+      ${preview ? `<div class="journal-card-preview">${preview}</div>` : ''}
+      ${photos  ? `<div class="journal-card-photos">${photos}</div>` : ''}
+      ${tags    ? `<div class="journal-card-footer">${tags}</div>` : ''}
+    </div>`;
+}
+
+function renderJournalList(notes) {
+  const el = document.getElementById('journal-view-list');
+  if (!el) return;
+  const pinned   = notes.filter(n => n.pinned);
+  const unpinned = notes.filter(n => !n.pinned);
+
+  if (!notes.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📔</div><p>No notes yet. Start writing!</p></div>`;
+    return;
+  }
+  let html = '';
+  if (pinned.length) {
+    html += `<div style="font-size:11px;font-weight:700;color:var(--warm);letter-spacing:.6px;margin-bottom:8px">📌 PINNED</div>`;
+    html += pinned.map(noteCardHtml).join('');
+    html += `<div style="font-size:11px;font-weight:700;color:var(--text-light);letter-spacing:.6px;margin:16px 0 8px">ALL NOTES</div>`;
+  }
+  html += unpinned.map(noteCardHtml).join('');
+  el.innerHTML = html;
+}
+
+function renderJournalWeek(notes) {
+  const el = document.getElementById('journal-view-week');
+  if (!el) return;
+  const today = new Date();
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    days.push(d.toISOString().slice(0, 10));
+  }
+  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:10px">` +
+    days.map(day => {
+      const dayNotes = notes.filter(n => n.date === day);
+      const label = new Date(day + 'T12:00:00').toLocaleDateString('en', { weekday: 'short', day: 'numeric' });
+      const isToday = day === todayStr();
+      return `<div class="journal-week-col" style="${isToday ? 'border-color:var(--warm);background:var(--warm-pale)' : ''}">
+        <div class="journal-week-col-day">${label}${isToday ? ' 📍' : ''}</div>
+        ${dayNotes.length ? dayNotes.map(n => `<div class="journal-week-mini" style="background:${n.color||'var(--beige)'}" onclick="openJournalModal('${n.id}')">
+          ${n.mood ? n.mood + ' ' : ''}${n.title.slice(0, 30)}
+        </div>`).join('') : `<div style="font-size:11px;color:var(--text-light);padding-top:4px">—</div>`}
+        <div style="margin-top:8px"><button class="btn btn-secondary btn-sm" style="width:100%;font-size:11px" onclick="event.stopPropagation();openJournalModalForDate('${day}')">+ Add</button></div>
+      </div>`;
+    }).join('') + `</div>`;
+}
+
+function renderJournalMonth(notes) {
+  const el = document.getElementById('journal-view-month');
+  if (!el) return;
+  const now   = new Date();
+  const year  = now.getFullYear();
+  const month = now.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const monthName = now.toLocaleDateString('en', { month: 'long', year: 'numeric' });
+
+  let cells = '';
+  const blanks = (firstDay + 6) % 7;
+  for (let i = 0; i < blanks; i++) cells += `<div class="journal-month-cell empty"></div>`;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const dayNotes = notes.filter(n => n.date === dateStr);
+    const isToday  = dateStr === todayStr();
+    cells += `<div class="journal-month-cell${isToday ? ' today' : ''}" onclick="openJournalModalForDate('${dateStr}')">
+      <div style="font-size:11px;font-weight:700;color:${isToday ? 'var(--warm-dark)' : 'var(--text-muted)'};margin-bottom:4px">${d}</div>
+      ${dayNotes.slice(0, 2).map(n => `<div style="font-size:10px;background:${n.color||'var(--beige)'};border-radius:4px;padding:2px 4px;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer" onclick="event.stopPropagation();openJournalModal('${n.id}')">${n.mood || ''}${n.title.slice(0, 12)}</div>`).join('')}
+      ${dayNotes.length > 2 ? `<div style="font-size:9px;color:var(--text-muted)">+${dayNotes.length - 2} more</div>` : ''}
+    </div>`;
+  }
+  el.innerHTML = `
+    <div style="font-family:'Playfair Display',serif;font-size:20px;color:var(--warm-dark);margin-bottom:14px;font-style:italic">${monthName}</div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px">
+      ${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d => `<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-align:center;padding:4px">${d}</div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${cells}</div>`;
+}
+
+function renderJournalCalendar(notes) {
+  const el = document.getElementById('journal-view-calendar');
+  if (!el) return;
+  // Show notes grouped by date, descending
+  const byDate = {};
+  notes.forEach(n => { (byDate[n.date] = byDate[n.date] || []).push(n); });
+  const dates = Object.keys(byDate).sort().reverse();
+
+  if (!dates.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">🗓</div><p>No notes to show in calendar</p></div>`;
+    return;
+  }
+  el.innerHTML = dates.map(date => {
+    const dayNotes = byDate[date];
+    const label = new Date(date + 'T12:00:00').toLocaleDateString('en', { weekday: 'long', day: 'numeric', month: 'long' });
+    return `<div style="margin-bottom:24px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <div style="width:48px;height:48px;border-radius:50%;background:var(--warm-pale);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--warm-dark);flex-shrink:0">${new Date(date + 'T12:00:00').getDate()}</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--warm-dark)">${label}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${dayNotes.length} note${dayNotes.length > 1 ? 's' : ''}</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="openJournalModalForDate('${date}')">+ Add</button>
+      </div>
+      ${dayNotes.map(noteCardHtml).join('')}
+    </div>`;
+  }).join('<hr style="border:none;border-top:1px solid var(--border);margin-bottom:24px">');
+}
+
+function openJournalModalForDate(date) {
+  openJournalModal();
+  setTimeout(() => { document.getElementById('jnote-date').value = date; }, 50);
+}
+
+// Wire up save() to include journal
+const _origSave = typeof save === 'function' ? save : null;
+// We'll patch after original save is defined – handled below via applyFirestoreData hook
+window.addEventListener('DOMContentLoaded', () => {
+  // patch renderJournal into applyFirestoreData
+  const origApply = window.applyFirestoreData;
+  window.applyFirestoreData = function() {
+    if (origApply) origApply();
+    jSync();
+    if (currentTab === 'journal') renderJournal();
+  };
+});
+
   const el = document.getElementById(id);
   if (!el) return;
   const maxV = Math.max(...data.map(d=>d.value), threshold, 1);
