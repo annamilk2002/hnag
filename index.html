@@ -4105,6 +4105,106 @@ function openJournalModalForDate(date) {
 
 // Journal save is included via window._journal in firestoreSave/firestoreLoad above.
 
+function exportRecipePDF(id) {
+  const r = recipes.find(x => x.id === id);
+  if (!r) return;
+
+  const displayName  = r.nameI18n?.[lang]  || r.name;
+  const displayDesc  = r.descI18n?.[lang]  || r.description;
+  const displayStory = r.storyI18n?.[lang] || r.story;
+  const displayNotes = r.notesI18n?.[lang] || r.notes;
+
+  const ings = r.ingredients.map(ing =>
+    `<tr><td>${ing.name}</td><td style="text-align:right;font-weight:700;color:#96563A">${ing.amount} ${ing.unit}</td></tr>`
+  ).join('');
+
+  const steps = (r.steps || []).map((s, i) => {
+    const text  = typeof s === 'string' ? s : (s.text || '');
+    const photo = typeof s === 'object' ? (s.photo || '') : '';
+    return `<div class="step">
+      <div class="step-num">${i + 1}</div>
+      <div class="step-body">
+        <p>${text}</p>
+        ${photo ? `<img src="${photo}" style="max-width:100%;max-height:200px;border-radius:8px;margin-top:8px;object-fit:cover" onerror="this.style.display='none'"/>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  const nut = r.nutrition || {};
+  const photoHeader = r.photo
+    ? `<img src="${r.photo}" style="width:100%;height:200px;object-fit:cover;border-radius:12px;margin-bottom:16px" onerror="this.style.display='none'"/>`
+    : '';
+
+  let timeStr = '';
+  if (r.cookingHours || r.cookingMinutes) {
+    timeStr = `⏱ ${r.cookingHours ? r.cookingHours + 'h ' : ''}${r.cookingMinutes ? r.cookingMinutes + 'min' : ''}`;
+  } else if (r.time) {
+    timeStr = `⏱ ${r.time} min`;
+  }
+
+  const meta = [
+    timeStr,
+    r.servings ? `🍽 ${r.servings} servings` : '',
+    r.difficulty ? `📊 ${r.difficulty}` : '',
+  ].filter(Boolean).join('  ·  ');
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html>
+<html lang="${lang}">
+<head>
+<meta charset="UTF-8"/>
+<title>${displayName}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'DM Sans',sans-serif; color:#3A2E28; background:#fff; padding:32px; max-width:700px; margin:auto; }
+  h1 { font-family:'Playfair Display',serif; font-size:28px; color:#96563A; font-style:italic; margin-bottom:6px; }
+  .meta { font-size:13px; color:#8C7B6B; margin-bottom:18px; }
+  .desc { font-size:14px; color:#5A4A3E; line-height:1.6; margin-bottom:18px; }
+  .story { background:#F5E4D6; border-left:4px solid #C8845A; border-radius:8px; padding:12px 16px; margin-bottom:20px; font-style:italic; font-size:13px; color:#3A2E28; }
+  .section { font-size:12px; font-weight:700; color:#3A2E28; text-transform:uppercase; letter-spacing:.5px; border-bottom:2px solid #E2D8C8; padding-bottom:6px; margin-bottom:14px; margin-top:24px; }
+  table { width:100%; border-collapse:collapse; margin-bottom:8px; }
+  td { padding:7px 4px; border-bottom:1px solid #E2D8C8; font-size:14px; }
+  .nut { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; background:#EDE5D2; border-radius:10px; padding:14px; margin-bottom:20px; text-align:center; }
+  .nut-val { font-size:22px; font-weight:700; }
+  .nut-unit { font-size:11px; color:#8C7B6B; }
+  .nut-lbl { font-size:11px; color:#B8A898; }
+  .step { display:flex; gap:12px; margin-bottom:14px; align-items:flex-start; }
+  .step-num { width:28px; height:28px; border-radius:50%; background:#C8845A; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex-shrink:0; margin-top:2px; }
+  .step-body { flex:1; font-size:14px; line-height:1.6; }
+  .notes { font-size:13px; color:#8C7B6B; font-style:italic; margin-top:18px; }
+  @media print {
+    body { padding:16px; }
+    button { display:none !important; }
+  }
+</style>
+</head>
+<body>
+  <div style="text-align:right;margin-bottom:16px">
+    <button onclick="window.print()" style="padding:8px 18px;background:#C8845A;color:#fff;border:none;border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer">🖨 Print / Save PDF</button>
+  </div>
+  ${photoHeader}
+  <h1>${displayName}</h1>
+  ${meta ? `<div class="meta">${meta}</div>` : ''}
+  ${displayDesc ? `<p class="desc">${displayDesc}</p>` : ''}
+  ${displayStory ? `<div class="story">📖 ${displayStory}</div>` : ''}
+
+  ${(nut.calories || nut.protein || nut.fat || nut.carbs) ? `
+  <div class="nut">
+    <div><div class="nut-val" style="color:#E08050">${nut.calories||0}</div><div class="nut-unit">kcal</div><div class="nut-lbl">Calories</div></div>
+    <div><div class="nut-val" style="color:#5A9E6B">${nut.protein||0}</div><div class="nut-unit">g</div><div class="nut-lbl">Protein</div></div>
+    <div><div class="nut-val" style="color:#D4875A">${nut.fat||0}</div><div class="nut-unit">g</div><div class="nut-lbl">Fat</div></div>
+    <div><div class="nut-val" style="color:#7B9ECC">${nut.carbs||0}</div><div class="nut-unit">g</div><div class="nut-lbl">Carbs</div></div>
+  </div>` : ''}
+
+  ${r.ingredients?.length ? `<div class="section">Ingredients</div><table>${ings}</table>` : ''}
+  ${r.steps?.length ? `<div class="section">Steps</div>${steps}` : ''}
+  ${displayNotes ? `<div class="notes">📝 ${displayNotes}</div>` : ''}
+</body>
+</html>`);
+  win.document.close();
+}
+
 function renderReportChart(id, data, color, threshold) {
   const el = document.getElementById(id);
   if (!el) return;
