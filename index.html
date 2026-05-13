@@ -2047,6 +2047,7 @@ function buildDetailHTML(r, scaledServings) {
     </div>
     ${displayNotes ? `<p style="font-size:13px;color:var(--text-muted);font-style:italic;margin-bottom:16px">📝 ${displayNotes}</p>` : ''}
     <div class="flex-end">
+      <button class="btn btn-secondary" onclick="exportRecipePDF('${r.id}')">📄 Save PDF</button>
       <button class="btn btn-secondary" onclick="closeModal('detail-modal')">${T[lang].recipe.cancel}</button>
       <button class="btn btn-primary" onclick="closeModal('detail-modal');openEditModal('${r.id}')">✏ ${T[lang].recipe.edit}</button>
     </div>`;
