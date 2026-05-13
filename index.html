@@ -1510,6 +1510,7 @@ window._recipes   = [...SAMPLE];
 window._mealPlan  = [];
 window._profile   = {name:'My Kitchen', calorieGoal:2000, notes:''};
 window._countries = [...DEFAULT_COUNTRIES];
+window._journal   = [];
 
 // Proxy vars used by the rest of the app
 let recipes   = window._recipes;
@@ -1525,10 +1526,13 @@ window.applyFirestoreData = () => {
   if (window._profile?.name)     profile   = window._profile;
   if (window._countries?.length) countries = window._countries;
   if (window._categories?.length) categories = window._categories;
+  // Journal sync
+  if (window._journal?.length)   journalNotes = window._journal;
   renderCategoryPills();
   renderCountryPills();
   renderRecipes();
   initMealPlanDate();
+  if (currentTab === 'journal') renderJournal();
 };
 
 // Reset when logged out
@@ -1538,6 +1542,7 @@ window.resetAppData = () => {
   profile    = window._profile    = {name:'My Kitchen', calorieGoal:2000, notes:''};
   countries  = window._countries  = [...DEFAULT_COUNTRIES];
   categories = window._categories = [...DEFAULT_CATS];
+  window._journal = [];
   renderCategoryPills();
   renderCountryPills();
   renderRecipes();
@@ -3874,18 +3879,7 @@ function openJournalModalForDate(date) {
   setTimeout(() => { document.getElementById('jnote-date').value = date; }, 50);
 }
 
-// Wire up save() to include journal
-const _origSave = typeof save === 'function' ? save : null;
-// We'll patch after original save is defined – handled below via applyFirestoreData hook
-window.addEventListener('DOMContentLoaded', () => {
-  // patch renderJournal into applyFirestoreData
-  const origApply = window.applyFirestoreData;
-  window.applyFirestoreData = function() {
-    if (origApply) origApply();
-    jSync();
-    if (currentTab === 'journal') renderJournal();
-  };
-});
+// Journal save is included via window._journal in firestoreSave/firestoreLoad above.
 
   const el = document.getElementById(id);
   if (!el) return;
