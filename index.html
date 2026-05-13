@@ -3881,6 +3881,7 @@ function openJournalModalForDate(date) {
 
 // Journal save is included via window._journal in firestoreSave/firestoreLoad above.
 
+function renderReportChart(id, data, color, threshold) {
   const el = document.getElementById(id);
   if (!el) return;
   const maxV = Math.max(...data.map(d=>d.value), threshold, 1);
