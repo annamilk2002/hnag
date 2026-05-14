@@ -79,24 +79,43 @@
 
         // Load data from Firestore
         showSyncStatus('loading');
-        const data = await window.firestoreLoad(user.uid);
-        if (data) {
-          // Merge: keep SAMPLE visible until real data arrives
-          window._recipes    = data.recipes?.length   ? data.recipes    : window._recipes;
-          window._mealPlan   = data.mealPlan           ? data.mealPlan   : window._mealPlan;
-          window._profile    = data.profile?.name      ? data.profile    : window._profile;
-          window._countries  = data.countries?.length  ? data.countries  : window._countries;
-          if (data.categories?.length) window._categories = data.categories;
-          if (data.journal?.length)    window._journal    = data.journal;
+        try {
+          const data = await window.firestoreLoad(user.uid);
+          if (data) {
+            // ── Safe merge: ALWAYS use Firestore data if it exists ──
+            // (never discard real user data in favour of SAMPLE)
+            if (Array.isArray(data.recipes))         window._recipes    = data.recipes;
+            if (Array.isArray(data.mealPlan))         window._mealPlan   = data.mealPlan;
+            if (data.profile && typeof data.profile === 'object') window._profile = data.profile;
+            if (Array.isArray(data.countries) && data.countries.length)  window._countries  = data.countries;
+            if (Array.isArray(data.categories) && data.categories.length) window._categories = data.categories;
+            if (Array.isArray(data.journal))          window._journal    = data.journal;
+            console.log('[App] Firestore loaded:', data.recipes?.length ?? 0, 'recipes');
+          } else {
+            console.log('[App] No Firestore document found for uid:', user.uid);
+          }
+          if (typeof window.applyFirestoreData === 'function') window.applyFirestoreData();
+        } catch(err) {
+          console.error('[App] Firestore load failed:', err);
+          showSyncStatus('error');
+          // Still render whatever we have locally
           if (typeof window.applyFirestoreData === 'function') window.applyFirestoreData();
         }
         showSyncStatus('synced');
+        // Show reload button for logged-in users
+        const reloadBtn = document.getElementById('btn-reload-data');
+        if (reloadBtn) reloadBtn.style.display = 'inline-block';
+        // Load social state (likes/saves)
+        if (typeof window._loadSocialState === 'function') window._loadSocialState();
       } else {
         loginBtn.style.display  = 'inline-flex';
         logoutBtn.style.display = 'none';
         userInfo.style.display  = 'none';
         userInfo.innerHTML = '';
         showSyncStatus('offline');
+        // Hide reload button
+        const reloadBtn = document.getElementById('btn-reload-data');
+        if (reloadBtn) reloadBtn.style.display = 'none';
         // Reset to empty state when logged out
         if (typeof window.resetAppData === 'function') window.resetAppData();
       }
@@ -998,6 +1017,12 @@
 <!-- Sync status bar -->
 <div id="sync-bar" style="text-align:center;padding:4px 0;font-size:12px;background:var(--beige-deep);border-bottom:1px solid var(--border);">
   <span id="sync-status" style="color:var(--text-muted);">🔒 Chưa đăng nhập</span>
+  <button id="btn-reload-data" onclick="reloadDataFromFirestore()" title="Перезагрузить данные из облака"
+    style="display:none;margin-left:12px;padding:2px 10px;font-size:11px;font-weight:600;
+    background:var(--warm-pale);border:1px solid var(--warm-light);border-radius:10px;
+    color:var(--warm-dark);cursor:pointer;transition:all .2s">
+    🔄 Обновить данные
+  </button>
 </div>
 
 <!-- ── MAIN ── -->
@@ -2055,6 +2080,38 @@ window.applyFirestoreData = () => {
   renderRecipes();
   initMealPlanDate();
   if (currentTab === 'journal') renderJournal();
+};
+
+// Manual reload from Firestore (button in sync bar)
+window.reloadDataFromFirestore = async () => {
+  const btn = document.getElementById('btn-reload-data');
+  if (btn) { btn.textContent = '⏳ Загружаю...'; btn.disabled = true; }
+  showSyncStatus('loading');
+  try {
+    const user = window._currentUser;
+    if (!user) { showToast('❌ Нужно войти в аккаунт'); return; }
+    const data = await window.firestoreLoad(user.uid);
+    if (data) {
+      if (Array.isArray(data.recipes))          window._recipes    = data.recipes;
+      if (Array.isArray(data.mealPlan))          window._mealPlan   = data.mealPlan;
+      if (data.profile && typeof data.profile === 'object') window._profile = data.profile;
+      if (Array.isArray(data.countries) && data.countries.length)  window._countries  = data.countries;
+      if (Array.isArray(data.categories) && data.categories.length) window._categories = data.categories;
+      if (Array.isArray(data.journal))           window._journal    = data.journal;
+      window.applyFirestoreData();
+      showToast(`✅ Загружено ${data.recipes?.length ?? 0} рецептов`);
+      showSyncStatus('synced');
+    } else {
+      showToast('⚠️ Данных в облаке не найдено');
+      showSyncStatus('offline');
+    }
+  } catch(e) {
+    console.error('Manual reload error:', e);
+    showToast('❌ Ошибка загрузки: ' + e.message);
+    showSyncStatus('error');
+  } finally {
+    if (btn) { btn.textContent = '🔄 Обновить данные'; btn.disabled = false; }
+  }
 };
 
 // Reset when logged out
