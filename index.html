@@ -646,6 +646,34 @@
     background: var(--warm); color: #fff; border-radius: 10px;
     padding: 1px 7px; font-size: 10px; font-weight: 700; min-width: 18px; text-align: center;
   }
+  /* ── AUTOSAVE INDICATOR ── */
+  .autosave-bar {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    min-height: 20px;
+    transition: opacity .3s;
+  }
+  .autosave-bar .autosave-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--text-muted);
+    flex-shrink: 0;
+    transition: background .3s;
+  }
+  .autosave-bar.saving .autosave-dot {
+    background: #C8845A;
+    animation: autosavePulse .9s ease infinite;
+  }
+  .autosave-bar.saved .autosave-dot  { background: #6B9E78; }
+  .autosave-bar.saved                { color: #6B9E78; }
+  @keyframes autosavePulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: .4; transform: scale(.7); }
+  }
+
   .btn-draft {
     padding: 10px 22px; border-radius: var(--radius-sm); border: 1.5px dashed #9CA3AF;
     cursor: pointer; font-size: 13px; font-family: var(--font-body);
@@ -1583,10 +1611,18 @@
 
     <input type="hidden" id="f-id"/>
     <input type="hidden" id="f-photo-data"/>
-    <div class="flex-end">
-      <button class="btn btn-secondary" onclick="closeModal('recipe-modal')" data-i="recipe.cancel">Cancel</button>
-      <button class="btn-draft" onclick="saveRecipeForm('draft')" title="Сохранить как черновик — можно доделать позже">💾 Черновик</button>
-      <button class="btn btn-primary" onclick="saveRecipeForm('publish')" data-i="recipe.save">Опубликовать</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:4px">
+      <!-- Autosave status indicator (left) -->
+      <div id="autosave-indicator" class="autosave-bar">
+        <div class="autosave-dot"></div>
+        <span id="autosave-text"></span>
+      </div>
+      <!-- Action buttons (right) -->
+      <div class="flex-end" style="margin:0">
+        <button class="btn btn-secondary" onclick="closeModal('recipe-modal')" data-i="recipe.cancel">Cancel</button>
+        <button class="btn-draft" onclick="saveRecipeFormDraftManual()" title="Сохранить черновик вручную">💾 Черновик</button>
+        <button class="btn btn-primary" onclick="saveRecipeForm('publish')" data-i="recipe.save">Опубликовать</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2155,6 +2191,7 @@ function openAddModal() {
   clearForm();
   renderCategorySelect();
   openModal('recipe-modal');
+  setTimeout(_startAutosave, 60); // slight delay so form is fully rendered
 }
 
 function openEditModal(id) {
@@ -2166,6 +2203,7 @@ function openEditModal(id) {
   renderCategorySelect();
   fillForm(r);
   openModal('recipe-modal');
+  setTimeout(_startAutosave, 60);
 }
 
 function clearForm() {
@@ -2434,7 +2472,7 @@ function handlePhotoUrl(url) {
   prev.onerror = () => { prev.style.display = 'none'; };
 }
 
-function saveRecipeForm(mode = 'publish') {
+function saveRecipeForm(mode = 'publish', silent = false) {
   const name = document.getElementById('f-name').value.trim();
   // Drafts can be saved without a name (use placeholder)
   if (!name && mode === 'publish') { alert('Please enter a recipe name'); return; }
@@ -2463,6 +2501,10 @@ function saveRecipeForm(mode = 'publish') {
   }).filter(Boolean);
 
   const id = document.getElementById('f-id').value || ('r' + Date.now());
+  // On first silent autosave, lock in the ID so future saves update the same record
+  if (!document.getElementById('f-id').value) {
+    document.getElementById('f-id').value = id;
+  }
   const existing = recipes.find(r => r.id === id);
   const category = document.getElementById('f-category').value;
 
@@ -2532,8 +2574,15 @@ function saveRecipeForm(mode = 'publish') {
     recipes.push(recipe);
   }
   save();
+
+  // ── Silent autosave (draft): do NOT close modal, do NOT switch tab ──
+  if (isDraft && silent) {
+    renderRecipes();
+    return; // exit early — UI stays open, no toast disruption
+  }
+
+  // ── Manual draft save: close modal and show toast ──
   closeModal('recipe-modal');
-  // If saved as draft, switch to draft filter so user sees it
   if (isDraft) {
     draftFilter = 'drafts';
     ['all','published','drafts'].forEach(f => {
@@ -2552,6 +2601,74 @@ function saveRecipeForm(mode = 'publish') {
     save();
     renderCountryPills();
   }
+}
+
+// ─── AUTOSAVE DRAFT ENGINE ────────────────────────────────────────────────────
+let _autosaveTimer   = null;
+let _autosaveActive  = false; // true while recipe-modal is open
+
+// Update the autosave indicator UI
+function setAutosaveStatus(state, text) {
+  const bar  = document.getElementById('autosave-indicator');
+  const span = document.getElementById('autosave-text');
+  if (!bar || !span) return;
+  bar.className  = 'autosave-bar ' + (state || '');
+  span.textContent = text || '';
+}
+
+// Called on every input/change inside the recipe modal
+function _triggerAutosave() {
+  if (!_autosaveActive) return;
+  setAutosaveStatus('saving', 'Сохраняю...');
+  clearTimeout(_autosaveTimer);
+  _autosaveTimer = setTimeout(() => {
+    try {
+      saveRecipeForm('draft', true); // silent = true → no modal close, no tab switch
+      setAutosaveStatus('saved', '✓ Черновик сохранён');
+      // Fade out after 3 s
+      setTimeout(() => setAutosaveStatus('', ''), 3000);
+    } catch(e) {
+      setAutosaveStatus('', '');
+      console.warn('Autosave error:', e);
+    }
+  }, 900); // 900 ms debounce
+}
+
+// Attach/detach listeners when modal opens/closes
+function _startAutosave() {
+  _autosaveActive = true;
+  setAutosaveStatus('', '');
+  const modal = document.getElementById('recipe-modal');
+  if (!modal) return;
+  // Single delegated listener on the whole modal
+  if (!modal._autosaveListener) {
+    modal._autosaveListener = (e) => {
+      const tag = e.target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+        _triggerAutosave();
+      }
+    };
+  }
+  modal.addEventListener('input',  modal._autosaveListener);
+  modal.addEventListener('change', modal._autosaveListener);
+}
+
+function _stopAutosave() {
+  _autosaveActive = false;
+  clearTimeout(_autosaveTimer);
+  const modal = document.getElementById('recipe-modal');
+  if (modal && modal._autosaveListener) {
+    modal.removeEventListener('input',  modal._autosaveListener);
+    modal.removeEventListener('change', modal._autosaveListener);
+  }
+  setAutosaveStatus('', '');
+}
+
+// Manual "Черновик" button — saves and closes modal (old UX preserved)
+function saveRecipeFormDraftManual() {
+  clearTimeout(_autosaveTimer);
+  saveRecipeForm('draft', false); // false = not silent → closes modal, shows toast
+  _stopAutosave();
 }
 
 function deleteRecipe(id) {
@@ -2736,7 +2853,10 @@ function showToast(msg, duration = 3000) {
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => el.classList.remove('show'), duration);
 }
-function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+function closeModal(id) {
+  document.getElementById(id).classList.add('hidden');
+  if (id === 'recipe-modal') _stopAutosave();
+}
 function closeModalOnBg(e, id) { if (e.target === e.currentTarget) closeModal(id); }
 
 // ─── CONDITIONAL CATEGORY LOGIC ─────────────────────────────────────────────
