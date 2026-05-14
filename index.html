@@ -856,6 +856,86 @@
     letter-spacing: 0.2px;
   }
 
+  /* ── RECIPE TIMER ── */
+  .recipe-timer-box {
+    background: linear-gradient(135deg, var(--beige-warm), var(--cream));
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    padding: 20px 22px 18px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-xs);
+  }
+  .recipe-timer-tabs {
+    display: flex; gap: 0; margin-bottom: 16px;
+    background: var(--beige-deep); border-radius: var(--radius-sm);
+    padding: 3px; width: fit-content;
+  }
+  .recipe-timer-tab {
+    padding: 6px 18px; border-radius: 9px; border: none; cursor: pointer;
+    font-size: 12px; font-weight: 700; font-family: var(--font-body);
+    color: var(--text-muted); background: transparent;
+    transition: all .18s; letter-spacing: 0.2px;
+  }
+  .recipe-timer-tab.active {
+    background: var(--warm); color: #fff;
+    box-shadow: 0 2px 8px rgba(184,113,78,0.32);
+  }
+  .recipe-timer-display {
+    font-family: 'Courier New', monospace;
+    font-size: 42px; font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--warm-dark);
+    text-align: center;
+    margin: 10px 0 14px;
+    transition: color .3s;
+    line-height: 1;
+  }
+  .recipe-timer-display.danger { color: #C0504D; }
+  .recipe-timer-inputs {
+    display: flex; gap: 8px; align-items: center; justify-content: center;
+    margin-bottom: 14px;
+  }
+  .timer-input-group {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .timer-input-group label {
+    font-size: 10px; font-weight: 700; color: var(--text-muted);
+    letter-spacing: .5px; text-transform: uppercase; margin-bottom: 0;
+  }
+  .timer-input-group input {
+    width: 58px; text-align: center; font-size: 18px; font-weight: 700;
+    font-family: 'Courier New', monospace; padding: 6px 4px;
+    border-radius: var(--radius-xs); border: 1.5px solid var(--border);
+    background: var(--cream); color: var(--warm-dark);
+    box-shadow: none;
+  }
+  .timer-sep {
+    font-size: 24px; font-weight: 700; color: var(--text-muted);
+    margin-top: 16px; line-height: 1;
+  }
+  .recipe-timer-btns {
+    display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+    margin-top: 4px;
+  }
+  .timer-btn {
+    padding: 9px 20px; border-radius: var(--radius-pill); border: none;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    font-family: var(--font-body); transition: all .18s;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .timer-btn.primary { background: var(--warm); color: #fff; box-shadow: 0 2px 10px rgba(184,113,78,0.3); }
+  .timer-btn.primary:hover { background: var(--warm-hover); }
+  .timer-btn.secondary { background: var(--beige-deep); color: var(--text-muted); border: 1px solid var(--border); }
+  .timer-btn.secondary:hover { background: var(--beige); color: var(--text); }
+  .timer-btn.danger { background: #FDEAEA; color: #C0504D; border: 1px solid #f5c6c6; }
+  .timer-preset-btn {
+    padding: 5px 12px; border-radius: var(--radius-pill);
+    border: 1px dashed var(--border); background: var(--cream);
+    color: var(--text-muted); font-size: 11px; font-weight: 600;
+    cursor: pointer; font-family: var(--font-body); transition: all .15s;
+  }
+  .timer-preset-btn:hover { border-color: var(--warm); color: var(--warm); background: var(--warm-pale); }
+
 </style>
 </head>
 <body>
@@ -2121,6 +2201,14 @@ function buildDetailHTML(r, scaledServings) {
     r.diameter ? `<span class="badge diameter-badge">⌀${r.diameter}см</span>` : '',
   ].filter(Boolean).join(' ');
 
+  // Build timer preset button if recipe has time
+  let timerPresetHTML = '';
+  if (r.cookingHours || r.cookingMinutes) {
+    timerPresetHTML = `<button class="timer-preset-btn" onclick="timerLoadRecipeTime(${r.cookingHours||0},${r.cookingMinutes||0})">↩ Установить (${r.cookingHours?r.cookingHours+'ч ':''}${r.cookingMinutes?r.cookingMinutes+'мин':''})</button>`;
+  } else if (r.time) {
+    timerPresetHTML = `<button class="timer-preset-btn" onclick="timerLoadRecipeTime(0,${r.time})">↩ Установить (${r.time}м)</button>`;
+  }
+
   return `
     <div class="modal-header">
       <div></div>
@@ -2135,6 +2223,52 @@ function buildDetailHTML(r, scaledServings) {
     </div>
     ${metaBadges ? `<div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap">${metaBadges}</div>` : ''}
     ${displayStory ? `<div class="story-block"><div class="story-label">STORY / CÂU CHUYỆN / ИСТОРИЯ</div><div class="story-text">${displayStory}</div></div>` : ''}
+
+    <!-- ⏱ TIMER WIDGET -->
+    <div class="recipe-timer-box">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:700;color:var(--warm-dark);letter-spacing:.3px">⏱ Таймер / Секундомер</div>
+        <div class="recipe-timer-tabs">
+          <button class="recipe-timer-tab active" id="rt-tab-timer" onclick="rtSwitchMode('timer')">⏳ Таймер</button>
+          <button class="recipe-timer-tab" id="rt-tab-stopwatch" onclick="rtSwitchMode('stopwatch')">⌚ Секундомер</button>
+        </div>
+      </div>
+
+      <!-- Timer mode -->
+      <div id="rt-timer-panel">
+        <div class="recipe-timer-inputs" id="rt-inputs">
+          <div class="timer-input-group">
+            <label>Часы</label>
+            <input type="number" id="rt-hours" value="0" min="0" max="23" onchange="rtSyncInputs()"/>
+          </div>
+          <div class="timer-sep">:</div>
+          <div class="timer-input-group">
+            <label>Минуты</label>
+            <input type="number" id="rt-minutes" value="0" min="0" max="59" onchange="rtSyncInputs()"/>
+          </div>
+          <div class="timer-sep">:</div>
+          <div class="timer-input-group">
+            <label>Секунды</label>
+            <input type="number" id="rt-seconds" value="0" min="0" max="59" onchange="rtSyncInputs()"/>
+          </div>
+        </div>
+        ${timerPresetHTML ? `<div style="text-align:center;margin-bottom:10px">${timerPresetHTML}</div>` : ''}
+        <div class="recipe-timer-display" id="rt-display">00:00:00</div>
+        <div class="recipe-timer-btns">
+          <button class="timer-btn primary" id="rt-start-btn" onclick="rtStartPause()">▶ Старт</button>
+          <button class="timer-btn secondary" onclick="rtReset()">↺ Сброс</button>
+        </div>
+      </div>
+
+      <!-- Stopwatch mode -->
+      <div id="rt-stopwatch-panel" style="display:none">
+        <div class="recipe-timer-display" id="rt-sw-display">00:00:00</div>
+        <div class="recipe-timer-btns">
+          <button class="timer-btn primary" id="rt-sw-btn" onclick="rtSwStartPause()">▶ Старт</button>
+          <button class="timer-btn secondary" onclick="rtSwReset()">↺ Сброс</button>
+        </div>
+      </div>
+    </div>
 
     <div class="scale-box mb20">
       <div class="scale-label">⚖ ${T[lang].scale.title}</div>
@@ -4405,6 +4539,172 @@ function exportRecipePDF(id) {
 </html>`);
   win.document.close();
 }
+
+// ─── RECIPE TIMER / STOPWATCH ────────────────────────────────────────────────
+const _rt = {
+  mode: 'timer',        // 'timer' | 'stopwatch'
+  // Timer state
+  totalSeconds: 0,      // total set seconds
+  remaining: 0,         // countdown remaining
+  running: false,
+  interval: null,
+  // Stopwatch state
+  swElapsed: 0,
+  swRunning: false,
+  swInterval: null,
+};
+
+function rtFmt(s) {
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+function rtSwitchMode(mode) {
+  _rt.mode = mode;
+  document.getElementById('rt-tab-timer')?.classList.toggle('active', mode === 'timer');
+  document.getElementById('rt-tab-stopwatch')?.classList.toggle('active', mode === 'stopwatch');
+  const tp = document.getElementById('rt-timer-panel');
+  const sp = document.getElementById('rt-stopwatch-panel');
+  if (tp) tp.style.display = mode === 'timer' ? '' : 'none';
+  if (sp) sp.style.display = mode === 'stopwatch' ? '' : 'none';
+}
+
+function rtSyncInputs() {
+  const h = parseInt(document.getElementById('rt-hours')?.value) || 0;
+  const m = parseInt(document.getElementById('rt-minutes')?.value) || 0;
+  const s = parseInt(document.getElementById('rt-seconds')?.value) || 0;
+  _rt.totalSeconds = h * 3600 + m * 60 + s;
+  _rt.remaining = _rt.totalSeconds;
+  const disp = document.getElementById('rt-display');
+  if (disp) { disp.textContent = rtFmt(_rt.remaining); disp.classList.remove('danger'); }
+}
+
+function timerLoadRecipeTime(hours, minutes) {
+  const hEl = document.getElementById('rt-hours');
+  const mEl = document.getElementById('rt-minutes');
+  const sEl = document.getElementById('rt-seconds');
+  if (hEl) hEl.value = hours;
+  if (mEl) mEl.value = minutes;
+  if (sEl) sEl.value = 0;
+  rtReset();
+  rtSyncInputs();
+}
+
+function rtStartPause() {
+  if (_rt.running) {
+    // Pause
+    clearInterval(_rt.interval);
+    _rt.running = false;
+    const btn = document.getElementById('rt-start-btn');
+    if (btn) btn.innerHTML = '▶ Продолжить';
+  } else {
+    // Need time set
+    rtSyncInputs();
+    if (_rt.remaining <= 0) { showToast('⏱ Установи время!'); return; }
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+    _rt.running = true;
+    const btn = document.getElementById('rt-start-btn');
+    if (btn) btn.innerHTML = '⏸ Пауза';
+    // Hide inputs while running
+    const inp = document.getElementById('rt-inputs');
+    if (inp) inp.style.opacity = '0.4';
+    _rt.interval = setInterval(() => {
+      _rt.remaining--;
+      const disp = document.getElementById('rt-display');
+      if (disp) {
+        disp.textContent = rtFmt(_rt.remaining);
+        // Red at 60s
+        disp.classList.toggle('danger', _rt.remaining <= 60 && _rt.remaining > 0);
+      }
+      if (_rt.remaining <= 0) {
+        clearInterval(_rt.interval);
+        _rt.running = false;
+        const btn = document.getElementById('rt-start-btn');
+        if (btn) btn.innerHTML = '▶ Старт';
+        if (disp) { disp.textContent = '00:00:00'; disp.classList.remove('danger'); }
+        const inp2 = document.getElementById('rt-inputs');
+        if (inp2) inp2.style.opacity = '1';
+        // Toast
+        showToast('⏰ Время вышло! Таймер завершён.');
+        // Browser notification
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('⏰ Таймер завершён!', { body: 'Время приготовления вышло.', icon: '' });
+        }
+        // Sound (beep)
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          [0, 0.3, 0.6].forEach(delay => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.frequency.value = 880;
+            gain.gain.setValueAtTime(0.4, ctx.currentTime + delay);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.4);
+            osc.start(ctx.currentTime + delay);
+            osc.stop(ctx.currentTime + delay + 0.5);
+          });
+        } catch(e) {}
+      }
+    }, 1000);
+  }
+}
+
+function rtReset() {
+  clearInterval(_rt.interval);
+  _rt.running = false;
+  rtSyncInputs();
+  const btn = document.getElementById('rt-start-btn');
+  if (btn) btn.innerHTML = '▶ Старт';
+  const disp = document.getElementById('rt-display');
+  if (disp) { disp.textContent = rtFmt(_rt.remaining); disp.classList.remove('danger'); }
+  const inp = document.getElementById('rt-inputs');
+  if (inp) inp.style.opacity = '1';
+}
+
+// ── Stopwatch ──
+function rtSwStartPause() {
+  if (_rt.swRunning) {
+    clearInterval(_rt.swInterval);
+    _rt.swRunning = false;
+    const btn = document.getElementById('rt-sw-btn');
+    if (btn) btn.innerHTML = '▶ Продолжить';
+  } else {
+    _rt.swRunning = true;
+    const btn = document.getElementById('rt-sw-btn');
+    if (btn) btn.innerHTML = '⏸ Пауза';
+    _rt.swInterval = setInterval(() => {
+      _rt.swElapsed++;
+      const disp = document.getElementById('rt-sw-display');
+      if (disp) disp.textContent = rtFmt(_rt.swElapsed);
+    }, 1000);
+  }
+}
+
+function rtSwReset() {
+  clearInterval(_rt.swInterval);
+  _rt.swRunning = false;
+  _rt.swElapsed = 0;
+  const disp = document.getElementById('rt-sw-display');
+  if (disp) disp.textContent = '00:00:00';
+  const btn = document.getElementById('rt-sw-btn');
+  if (btn) btn.innerHTML = '▶ Старт';
+}
+
+// Stop timers when detail modal closes
+const _origCloseModal = window.closeModal;
+window.closeModal = function(id) {
+  if (id === 'detail-modal') {
+    clearInterval(_rt.interval); _rt.running = false;
+    clearInterval(_rt.swInterval); _rt.swRunning = false;
+    _rt.remaining = 0; _rt.swElapsed = 0;
+  }
+  if (typeof _origCloseModal === 'function') _origCloseModal(id);
+};
 
 function renderReportChart(id, data, color, threshold) {
   const el = document.getElementById(id);
