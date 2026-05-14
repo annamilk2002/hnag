@@ -602,7 +602,7 @@
   /* ── PROFILE ── */
   .profile-box {
     background: var(--beige-card); border: 1px solid var(--border-soft);
-    border-radius: var(--radius); padding: 32px; max-width: 500px;
+    border-radius: var(--radius); padding: 32px; max-width: 600px;
     box-shadow: var(--shadow);
   }
   .avatar {
@@ -612,6 +612,109 @@
     font-size: 30px; margin-bottom: 24px;
     border: 3px solid var(--warm-light); box-shadow: 0 4px 16px rgba(184,113,78,0.2);
   }
+
+  /* ── AVATAR BUILDER ── */
+  .avatar-builder-wrap {
+    background: var(--beige-card); border: 1px solid var(--border-soft);
+    border-radius: var(--radius); padding: 28px; max-width: 680px;
+    box-shadow: var(--shadow); margin-top: 20px;
+  }
+  .avatar-builder-grid {
+    display: grid; grid-template-columns: 200px 1fr; gap: 28px; align-items: start;
+  }
+  @media(max-width:600px){ .avatar-builder-grid { grid-template-columns:1fr; } }
+  .avatar-preview-circle {
+    width: 160px; height: 160px; border-radius: 50%;
+    background: linear-gradient(135deg, #F6EDE3, #F0D9C8);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 88px; border: 4px solid var(--warm-light);
+    box-shadow: 0 8px 28px rgba(184,113,78,0.22);
+    cursor: pointer; position: relative; overflow: hidden;
+    transition: box-shadow .2s;
+  }
+  .avatar-preview-circle:hover { box-shadow: 0 10px 36px rgba(184,113,78,.32); }
+  .avatar-preview-photo {
+    width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: none;
+  }
+  .avatar-upload-overlay {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(150,86,58,.72); color: #fff;
+    font-size: 11px; font-weight: 600; text-align: center;
+    padding: 6px 4px; opacity: 0; transition: opacity .2s;
+  }
+  .avatar-preview-circle:hover .avatar-upload-overlay { opacity: 1; }
+  .avatar-section-label {
+    font-size: 10px; font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px; margin-top: 14px;
+  }
+  .avatar-section-label:first-child { margin-top: 0; }
+  .avatar-opts { display: flex; flex-wrap: wrap; gap: 6px; }
+  .avatar-opt {
+    padding: 5px 12px; border-radius: var(--radius-pill);
+    border: 1.5px solid var(--border-soft); background: var(--beige-bg);
+    color: var(--text-muted); font-size: 13px; cursor: pointer; transition: all .18s;
+  }
+  .avatar-opt:hover { border-color: var(--warm-light); color: var(--warm-dark); }
+  .avatar-opt.sel { background: var(--warm); color: #fff; border-color: var(--warm); }
+  .avatar-color-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .avatar-color-dot {
+    width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
+    border: 3px solid transparent; transition: all .18s; flex-shrink: 0;
+  }
+  .avatar-color-dot.sel { border-color: var(--mocha); transform: scale(1.15); }
+
+  /* ── COOKING TIMER (in detail modal) ── */
+  .cooking-timer-bar {
+    background: linear-gradient(135deg, #FDF6EF, #F5EBE0);
+    border: 1px solid var(--warm-light); border-radius: 14px;
+    padding: 16px 20px; margin-bottom: 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .timer-digits {
+    font-size: 38px; font-weight: 700; letter-spacing: -1px;
+    color: var(--mocha); font-variant-numeric: tabular-nums;
+    min-width: 120px; line-height: 1;
+  }
+  .timer-btns { display: flex; gap: 8px; align-items: center; }
+  .timer-btn-round {
+    width: 42px; height: 42px; border-radius: 50%; border: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; cursor: pointer; transition: all .18s;
+  }
+  .timer-btn-round.go  { background: var(--warm); color: #fff; box-shadow: 0 4px 14px rgba(200,132,90,.35); }
+  .timer-btn-round.go:hover { background: var(--mocha); transform: scale(1.06); }
+  .timer-btn-round.pause { background: #FFF3E0; color: #E65100; }
+  .timer-btn-round.stop  { background: #FDEAEA; color: #C0504D; }
+  .timer-btn-round.reset { background: var(--beige-deep); color: var(--text-muted); }
+  .timer-label { font-size: 11px; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
+  .timer-mode-tabs { display: flex; gap: 5px; }
+  .timer-mode-tab {
+    padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1.5px solid var(--border-soft);
+    background: transparent; color: var(--text-muted); transition: all .18s;
+  }
+  .timer-mode-tab.active { background: var(--warm); color: #fff; border-color: var(--warm); }
+  @keyframes timerPulse {
+    0%,100% { opacity:1; } 50% { opacity:.5; }
+  }
+  .timer-digits.running { animation: timerPulse 1s step-end infinite; }
+
+  /* ── MULTILANG TABS in recipe form ── */
+  .lang-tab-row {
+    display: flex; gap: 0; border-bottom: 2px solid var(--border-soft);
+    margin-bottom: 12px;
+  }
+  .lang-tab {
+    padding: 7px 16px; font-size: 13px; font-weight: 600;
+    color: var(--text-muted); cursor: pointer; border: none;
+    background: transparent; border-bottom: 2px solid transparent;
+    margin-bottom: -2px; transition: all .18s;
+  }
+  .lang-tab.active { color: var(--warm-dark); border-bottom-color: var(--warm); }
+  .lang-tab:hover:not(.active) { color: var(--text); }
+  .lang-panel { display: none; }
+  .lang-panel.active { display: block; }
 
   /* ── TOAST ── */
   .toast {
@@ -978,20 +1081,102 @@
   <!-- PROFILE TAB -->
   <div id="tab-profile" class="hidden">
     <div class="profile-box">
-      <div class="avatar">👤</div>
-      <div class="mb16">
-        <label data-i="profile.name">Name</label>
-        <input type="text" id="profile-name"/>
+      <!-- Avatar: click to upload photo OR use emoji builder -->
+      <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;margin-bottom:24px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+          <div class="avatar-preview-circle" id="profile-avatar-circle" onclick="document.getElementById('profile-photo-file').click()">
+            <span id="profile-avatar-emoji" style="line-height:1">👤</span>
+            <img id="profile-avatar-img" class="avatar-preview-photo" alt="avatar"/>
+            <div class="avatar-upload-overlay">📷 Загрузить фото</div>
+          </div>
+          <input type="file" id="profile-photo-file" accept="image/*" style="display:none" onchange="handleProfilePhotoUpload(event)"/>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('profile-photo-file').click()" title="Загрузить фото">📷</button>
+            <button class="btn btn-secondary btn-sm" id="avatar-builder-toggle" onclick="toggleAvatarBuilder()" title="Создать аватар">🎨</button>
+            <button class="btn btn-secondary btn-sm" onclick="resetProfilePhoto()" title="Сбросить">✕</button>
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);text-align:center;max-width:120px">Фото или создай аватар</div>
+        </div>
+        <div style="flex:1;min-width:200px">
+          <div class="mb16">
+            <label data-i="profile.name">Name</label>
+            <input type="text" id="profile-name"/>
+          </div>
+          <div class="mb16">
+            <label data-i="profile.goal">Calorie goal / day</label>
+            <input type="number" id="profile-cal"/>
+          </div>
+          <div class="mb20">
+            <label>Notes</label>
+            <textarea id="profile-notes" rows="3"></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="saveProfile()"><span data-i="profile.save">Save Profile</span></button>
+        </div>
       </div>
-      <div class="mb16">
-        <label data-i="profile.goal">Calorie goal / day</label>
-        <input type="number" id="profile-cal"/>
+    </div>
+
+    <!-- Avatar Builder Panel (hidden by default) -->
+    <div class="avatar-builder-wrap hidden" id="avatar-builder-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+        <div class="section-title" style="margin:0">🎨 Создать аватар</div>
+        <button class="btn btn-secondary btn-sm" onclick="toggleAvatarBuilder()">✕ Закрыть</button>
       </div>
-      <div class="mb20">
-        <label>Notes</label>
-        <textarea id="profile-notes" rows="3"></textarea>
+      <div class="avatar-builder-grid">
+        <!-- Preview -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
+          <div class="avatar-preview-circle" id="avatar-big-preview" style="width:160px;height:160px;font-size:88px;cursor:default">
+            <span id="avatar-big-emoji">👤</span>
+          </div>
+          <div style="font-size:13px;font-weight:600;color:var(--warm-dark)" id="avatar-bg-preview"
+            style="width:160px;height:160px;border-radius:50%;display:flex;align-items:center;justify-content:center"></div>
+          <button class="btn btn-primary" style="width:100%" onclick="applyAvatarEmoji()">✅ Применить аватар</button>
+        </div>
+
+        <!-- Options -->
+        <div>
+          <div class="avatar-section-label">Пол / Образ</div>
+          <div class="avatar-opts" id="av-base">
+            <span class="avatar-opt sel" data-av-base="👤" onclick="setAv('base',this,'👤')">👤 Нейтрал</span>
+            <span class="avatar-opt" data-av-base="👩" onclick="setAv('base',this,'👩')">👩 Женщина</span>
+            <span class="avatar-opt" data-av-base="👨" onclick="setAv('base',this,'👨')">👨 Мужчина</span>
+            <span class="avatar-opt" data-av-base="🧑" onclick="setAv('base',this,'🧑')">🧑 Унисекс</span>
+            <span class="avatar-opt" data-av-base="👧" onclick="setAv('base',this,'👧')">👧 Девочка</span>
+            <span class="avatar-opt" data-av-base="👦" onclick="setAv('base',this,'👦')">👦 Мальчик</span>
+          </div>
+
+          <div class="avatar-section-label">Причёска</div>
+          <div class="avatar-opts" id="av-hair">
+            <span class="avatar-opt sel" data-val="" onclick="setAv('hair',this,'')">— Без</span>
+            <span class="avatar-opt" data-val="👩‍🦰" onclick="setAv('hair',this,'👩‍🦰')">🦰 Рыжие</span>
+            <span class="avatar-opt" data-val="👩‍🦱" onclick="setAv('hair',this,'👩‍🦱')">🦱 Кудри</span>
+            <span class="avatar-opt" data-val="👩‍🦳" onclick="setAv('hair',this,'👩‍🦳')">🦳 Седые</span>
+            <span class="avatar-opt" data-val="👩‍🦲" onclick="setAv('hair',this,'👩‍🦲')">🦲 Лысая</span>
+            <span class="avatar-opt" data-val="💇" onclick="setAv('hair',this,'💇')">💇 Стрижка</span>
+          </div>
+
+          <div class="avatar-section-label">Активность / Стиль</div>
+          <div class="avatar-opts" id="av-style">
+            <span class="avatar-opt sel" data-val="" onclick="setAv('style',this,'')">— Обычный</span>
+            <span class="avatar-opt" data-val="🍳" onclick="setAv('style',this,'🍳')">🍳 Повар</span>
+            <span class="avatar-opt" data-val="🏃" onclick="setAv('style',this,'🏃')">🏃 Спорт</span>
+            <span class="avatar-opt" data-val="🧘" onclick="setAv('style',this,'🧘')">🧘 Йога</span>
+            <span class="avatar-opt" data-val="💪" onclick="setAv('style',this,'💪')">💪 Фитнес</span>
+            <span class="avatar-opt" data-val="🌿" onclick="setAv('style',this,'🌿')">🌿 Здоровье</span>
+          </div>
+
+          <div class="avatar-section-label">Фон аватара</div>
+          <div class="avatar-color-row" id="av-bg">
+            <div class="avatar-color-dot sel" data-bg="linear-gradient(135deg,#F6EDE3,#F0D9C8)" style="background:linear-gradient(135deg,#F6EDE3,#F0D9C8)" onclick="setAvBg(this,'linear-gradient(135deg,#F6EDE3,#F0D9C8)')"></div>
+            <div class="avatar-color-dot" data-bg="linear-gradient(135deg,#D4EADA,#A8D5B5)" style="background:linear-gradient(135deg,#D4EADA,#A8D5B5)" onclick="setAvBg(this,'linear-gradient(135deg,#D4EADA,#A8D5B5)')"></div>
+            <div class="avatar-color-dot" data-bg="linear-gradient(135deg,#E8D5F0,#D4A8E8)" style="background:linear-gradient(135deg,#E8D5F0,#D4A8E8)" onclick="setAvBg(this,'linear-gradient(135deg,#E8D5F0,#D4A8E8)')"></div>
+            <div class="avatar-color-dot" data-bg="linear-gradient(135deg,#D5E8F0,#A8C8E8)" style="background:linear-gradient(135deg,#D5E8F0,#A8C8E8)" onclick="setAvBg(this,'linear-gradient(135deg,#D5E8F0,#A8C8E8)')"></div>
+            <div class="avatar-color-dot" data-bg="linear-gradient(135deg,#F0E8D5,#E8C8A8)" style="background:linear-gradient(135deg,#F0E8D5,#E8C8A8)" onclick="setAvBg(this,'linear-gradient(135deg,#F0E8D5,#E8C8A8)')"></div>
+            <div class="avatar-color-dot" data-bg="linear-gradient(135deg,#F5D5D5,#EBA8A8)" style="background:linear-gradient(135deg,#F5D5D5,#EBA8A8)" onclick="setAvBg(this,'linear-gradient(135deg,#F5D5D5,#EBA8A8)')"></div>
+            <div class="avatar-color-dot" data-bg="linear-gradient(135deg,#2D3748,#4A5568)" style="background:linear-gradient(135deg,#2D3748,#4A5568)" onclick="setAvBg(this,'linear-gradient(135deg,#2D3748,#4A5568)')"></div>
+            <div class="avatar-color-dot" data-bg="linear-gradient(135deg,#C8845A,#96563A)" style="background:linear-gradient(135deg,#C8845A,#96563A)" onclick="setAvBg(this,'linear-gradient(135deg,#C8845A,#96563A)')"></div>
+          </div>
+        </div>
       </div>
-      <button class="btn btn-primary" onclick="saveProfile()"><span data-i="profile.save">Save Profile</span></button>
     </div>
   </div>
 
@@ -1588,25 +1773,107 @@
       </div>
     </div>
 
-    <!-- Ingredients -->
-    <div class="mb20">
-      <div class="section-title" data-i="recipe.ingredients">Ingredients</div>
-      <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px">💡 КБЖУ рассчитывается автоматически при добавлении ингредиентов</p>
-      <div id="f-ingredients"></div>
-      <button class="btn btn-secondary btn-sm" onclick="addIngredientRow()">+ <span data-i="recipe.addIngredient">Add Ingredient</span></button>
-    </div>
+    <!-- ══ MULTILANG TABS: Ингредиенты / Шаги / Заметки ══ -->
+    <div style="margin-bottom:20px">
+      <!-- Tab row -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div class="lang-tab-row" style="margin-bottom:0;border-bottom:none">
+          <button class="lang-tab active" id="ltab-main" onclick="switchLangTab('main')">🍽 Основной</button>
+          <button class="lang-tab" id="ltab-en" onclick="switchLangTab('en')">🇬🇧 English</button>
+          <button class="lang-tab" id="ltab-ru" onclick="switchLangTab('ru')">🇷🇺 Русский</button>
+          <button class="lang-tab" id="ltab-vi" onclick="switchLangTab('vi')">🇻🇳 Tiếng Việt</button>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted)">Добавь перевод на другом языке</div>
+      </div>
+      <div style="border-bottom:2px solid var(--border-soft);margin-bottom:14px"></div>
 
-    <!-- Steps -->
-    <div class="mb20">
-      <div class="section-title" data-i="recipe.steps">Steps</div>
-      <div id="f-steps"></div>
-      <button class="btn btn-secondary btn-sm" onclick="addStepRow()">+ Add Step</button>
-    </div>
+      <!-- MAIN language panel -->
+      <div class="lang-panel active" id="lpanel-main">
+        <!-- Ingredients -->
+        <div class="mb20">
+          <div class="section-title" data-i="recipe.ingredients">Ingredients</div>
+          <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px">💡 КБЖУ рассчитывается автоматически при добавлении ингредиентов</p>
+          <div id="f-ingredients"></div>
+          <button class="btn btn-secondary btn-sm" onclick="addIngredientRow()">+ <span data-i="recipe.addIngredient">Add Ingredient</span></button>
+        </div>
+        <!-- Steps -->
+        <div class="mb20">
+          <div class="section-title" data-i="recipe.steps">Steps</div>
+          <div id="f-steps"></div>
+          <button class="btn btn-secondary btn-sm" onclick="addStepRow()">+ Add Step</button>
+        </div>
+        <!-- Notes -->
+        <div class="mb24">
+          <label data-i="recipe.notes">Notes</label>
+          <textarea id="f-notes" rows="2"></textarea>
+        </div>
+      </div>
 
-    <!-- Notes -->
-    <div class="mb24">
-      <label data-i="recipe.notes">Notes</label>
-      <textarea id="f-notes" rows="2"></textarea>
+      <!-- ENGLISH panel -->
+      <div class="lang-panel" id="lpanel-en">
+        <div style="background:linear-gradient(135deg,#EEF4FF,#E8F0FB);border:1px solid #C5D8FA;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#3A5AA0">
+          🇬🇧 Добавь ингредиенты и шаги на английском — это поможет другим пользователям
+        </div>
+        <div class="mb20">
+          <div class="section-title">Ingredients (EN)</div>
+          <div id="f-ingredients-en"></div>
+          <button class="btn btn-secondary btn-sm" onclick="addIngredientRowLang('en')">+ Add Ingredient</button>
+        </div>
+        <div class="mb20">
+          <div class="section-title">Steps (EN)</div>
+          <div id="f-steps-en"></div>
+          <button class="btn btn-secondary btn-sm" onclick="addStepRowLang('en')">+ Add Step</button>
+        </div>
+        <div class="mb24">
+          <label>Notes (EN)</label>
+          <textarea id="f-notes-en-text" rows="2" placeholder="Optional notes in English..."></textarea>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted)">💡 Если оставить пустым — будет использован основной язык</div>
+      </div>
+
+      <!-- RUSSIAN panel -->
+      <div class="lang-panel" id="lpanel-ru">
+        <div style="background:linear-gradient(135deg,#FFF3E8,#FDEBD8);border:1px solid #F5C89A;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#7A4A1A">
+          🇷🇺 Добавь ингредиенты и шаги на русском
+        </div>
+        <div class="mb20">
+          <div class="section-title">Ингредиенты (RU)</div>
+          <div id="f-ingredients-ru"></div>
+          <button class="btn btn-secondary btn-sm" onclick="addIngredientRowLang('ru')">+ Добавить ингредиент</button>
+        </div>
+        <div class="mb20">
+          <div class="section-title">Шаги (RU)</div>
+          <div id="f-steps-ru"></div>
+          <button class="btn btn-secondary btn-sm" onclick="addStepRowLang('ru')">+ Добавить шаг</button>
+        </div>
+        <div class="mb24">
+          <label>Заметки (RU)</label>
+          <textarea id="f-notes-ru-text" rows="2" placeholder="Заметки на русском..."></textarea>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted)">💡 Если оставить пустым — будет использован основной язык</div>
+      </div>
+
+      <!-- VIETNAMESE panel -->
+      <div class="lang-panel" id="lpanel-vi">
+        <div style="background:linear-gradient(135deg,#FFEFEF,#FFE0E0);border:1px solid #F5AAAA;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#8A2020">
+          🇻🇳 Thêm nguyên liệu và các bước bằng tiếng Việt
+        </div>
+        <div class="mb20">
+          <div class="section-title">Nguyên liệu (VI)</div>
+          <div id="f-ingredients-vi"></div>
+          <button class="btn btn-secondary btn-sm" onclick="addIngredientRowLang('vi')">+ Thêm nguyên liệu</button>
+        </div>
+        <div class="mb20">
+          <div class="section-title">Các bước (VI)</div>
+          <div id="f-steps-vi"></div>
+          <button class="btn btn-secondary btn-sm" onclick="addStepRowLang('vi')">+ Thêm bước</button>
+        </div>
+        <div class="mb24">
+          <label>Ghi chú (VI)</label>
+          <textarea id="f-notes-vi-text" rows="2" placeholder="Ghi chú bằng tiếng Việt..."></textarea>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted)">💡 Nếu để trống — sẽ sử dụng ngôn ngữ chính</div>
+      </div>
     </div>
 
     <input type="hidden" id="f-id"/>
@@ -2135,6 +2402,40 @@ function buildDetailHTML(r, scaledServings) {
     </div>
     ${metaBadges ? `<div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap">${metaBadges}</div>` : ''}
     ${displayStory ? `<div class="story-block"><div class="story-label">STORY / CÂU CHUYỆN / ИСТОРИЯ</div><div class="story-text">${displayStory}</div></div>` : ''}
+
+    <!-- ⏱ COOKING TIMER -->
+    <div class="cooking-timer-bar" id="ctimer-bar-${r.id}">
+      <div>
+        <div class="timer-mode-tabs" style="margin-bottom:8px">
+          <button class="timer-mode-tab active" id="ctmode-timer-${r.id}" onclick="setTimerMode('${r.id}','timer')">⏱ Таймер</button>
+          <button class="timer-mode-tab" id="ctmode-stopwatch-${r.id}" onclick="setTimerMode('${r.id}','stopwatch')">⏱ Секундомер</button>
+        </div>
+        <div class="timer-digits" id="ctimer-digits-${r.id}">00:00:00</div>
+        <div class="timer-label" id="ctimer-label-${r.id}">Нажми ▶ чтобы начать</div>
+      </div>
+      <div>
+        <!-- Timer preset if recipe has cooking time -->
+        ${(r.cookingHours || r.cookingMinutes) ? `
+        <div style="margin-bottom:10px;font-size:12px;color:var(--text-muted)">
+          Время рецепта: <strong style="color:var(--warm-dark)">${r.cookingHours ? r.cookingHours+'ч ' : ''}${r.cookingMinutes ? r.cookingMinutes+'мин' : ''}</strong>
+          <button class="btn btn-secondary btn-sm" style="margin-left:6px;font-size:11px" onclick="setTimerPreset('${r.id}',${(r.cookingHours||0)*3600+(r.cookingMinutes||0)*60})">↩ Установить</button>
+        </div>` : ''}
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">Таймер:</span>
+          <input type="number" id="ctimer-h-${r.id}" min="0" max="99" value="0" placeholder="ч" style="width:52px;padding:4px 6px;font-size:13px;border-radius:8px;border:1px solid var(--border-soft)"/>
+          <span style="color:var(--text-muted);font-size:13px">ч</span>
+          <input type="number" id="ctimer-m-${r.id}" min="0" max="59" value="0" placeholder="мин" style="width:52px;padding:4px 6px;font-size:13px;border-radius:8px;border:1px solid var(--border-soft)"/>
+          <span style="color:var(--text-muted);font-size:13px">мин</span>
+          <input type="number" id="ctimer-s-${r.id}" min="0" max="59" value="0" placeholder="сек" style="width:52px;padding:4px 6px;font-size:13px;border-radius:8px;border:1px solid var(--border-soft)"/>
+          <span style="color:var(--text-muted);font-size:13px">сек</span>
+        </div>
+        <div class="timer-btns">
+          <button class="timer-btn-round go" id="ctimer-play-${r.id}" onclick="timerPlay('${r.id}')" title="Старт">▶</button>
+          <button class="timer-btn-round pause" id="ctimer-pause-${r.id}" onclick="timerPause('${r.id}')" title="Пауза">⏸</button>
+          <button class="timer-btn-round reset" onclick="timerReset('${r.id}')" title="Сброс">↺</button>
+        </div>
+      </div>
+    </div>
 
     <div class="scale-box mb20">
       <div class="scale-label">⚖ ${T[lang].scale.title}</div>
@@ -4417,8 +4718,383 @@ function renderReportChart(id, data, color, threshold) {
       <div class="bar-date">${d.label}</div>
     </div>
   `).join('');
+    <div class="bar-wrap">
+      <div class="bar-val">${d.value > 0 ? d.value : ''}</div>
+      <div class="bar" style="height:${Math.max(d.value>0?4:2,(d.value/maxV)*100)}px;background:${d.value>=threshold?'#6B9E78':color};opacity:${d.value>0?'0.75':'0.15'}"></div>
+      <div class="bar-date">${d.label}</div>
+    </div>
+  `).join('');
 }
-</script>
-<div class="toast" id="app-toast"></div>
-</body>
-</html>
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AVATAR BUILDER
+// ═══════════════════════════════════════════════════════════════════════════
+let _avatarState = { base:'👤', hair:'', style:'', bg:'linear-gradient(135deg,#F6EDE3,#F0D9C8)' };
+let _profilePhotoData = ''; // base64 or url
+
+function toggleAvatarBuilder() {
+  const panel = document.getElementById('avatar-builder-panel');
+  if (!panel) return;
+  const hidden = panel.classList.contains('hidden');
+  panel.classList.toggle('hidden', !hidden);
+  const btn = document.getElementById('avatar-builder-toggle');
+  if (btn) btn.style.background = hidden ? 'var(--warm-pale)' : '';
+}
+
+function setAv(type, el, val) {
+  // deselect others in group
+  el.closest('.avatar-opts').querySelectorAll('.avatar-opt').forEach(o => o.classList.remove('sel'));
+  el.classList.add('sel');
+  _avatarState[type] = val;
+  updateAvatarPreview();
+}
+
+function setAvBg(el, bg) {
+  document.querySelectorAll('#av-bg .avatar-color-dot').forEach(d => d.classList.remove('sel'));
+  el.classList.add('sel');
+  _avatarState.bg = bg;
+  updateAvatarPreview();
+}
+
+function updateAvatarPreview() {
+  const bigPreview = document.getElementById('avatar-big-preview');
+  const emojiEl    = document.getElementById('avatar-big-emoji');
+  if (!bigPreview || !emojiEl) return;
+
+  // Compose emoji: use hair version if available (overrides base)
+  const composed = _avatarState.hair || _avatarState.base;
+  const withStyle = _avatarState.style ? _avatarState.style : '';
+  emojiEl.textContent = composed + (withStyle ? ' ' + withStyle : '');
+  bigPreview.style.background = _avatarState.bg;
+}
+
+function applyAvatarEmoji() {
+  const composed = _avatarState.hair || _avatarState.base;
+  const withStyle = _avatarState.style ? ' ' + _avatarState.style : '';
+  const emoji = composed + withStyle;
+
+  // Apply to small avatar circle
+  const circle  = document.getElementById('profile-avatar-circle');
+  const emojiEl = document.getElementById('profile-avatar-emoji');
+  const imgEl   = document.getElementById('profile-avatar-img');
+  if (circle) circle.style.background = _avatarState.bg;
+  if (emojiEl) { emojiEl.textContent = emoji; emojiEl.style.display = ''; }
+  if (imgEl)   { imgEl.style.display = 'none'; }
+
+  // Save to profile
+  _profilePhotoData = '';
+  profile.avatarEmoji = emoji;
+  profile.avatarBg    = _avatarState.bg;
+  save();
+  showToast('🎨 Аватар сохранён!');
+  toggleAvatarBuilder();
+}
+
+function handleProfilePhotoUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    _profilePhotoData = ev.target.result;
+    const imgEl   = document.getElementById('profile-avatar-img');
+    const emojiEl = document.getElementById('profile-avatar-emoji');
+    if (imgEl)   { imgEl.src = _profilePhotoData; imgEl.style.display = 'block'; }
+    if (emojiEl) emojiEl.style.display = 'none';
+    profile.avatarPhoto = _profilePhotoData;
+    profile.avatarEmoji = '';
+    save();
+    showToast('📷 Фото загружено!');
+  };
+  reader.readAsDataURL(file);
+}
+
+function resetProfilePhoto() {
+  _profilePhotoData = '';
+  const imgEl   = document.getElementById('profile-avatar-img');
+  const emojiEl = document.getElementById('profile-avatar-emoji');
+  const circle  = document.getElementById('profile-avatar-circle');
+  if (imgEl)   { imgEl.src = ''; imgEl.style.display = 'none'; }
+  if (emojiEl) { emojiEl.textContent = '👤'; emojiEl.style.display = ''; }
+  if (circle)  circle.style.background = '';
+  profile.avatarPhoto = '';
+  profile.avatarEmoji = '';
+  save();
+  showToast('✕ Аватар сброшен');
+}
+
+// Restore avatar on profile load
+const _origLoadProfileForm2 = window.loadProfileForm;
+window.loadProfileForm = function() {
+  _origLoadProfileForm2?.();
+  const circle  = document.getElementById('profile-avatar-circle');
+  const imgEl   = document.getElementById('profile-avatar-img');
+  const emojiEl = document.getElementById('profile-avatar-emoji');
+  if (!circle) return;
+  if (profile.avatarPhoto) {
+    if (imgEl)   { imgEl.src = profile.avatarPhoto; imgEl.style.display = 'block'; }
+    if (emojiEl) emojiEl.style.display = 'none';
+  } else if (profile.avatarEmoji) {
+    if (emojiEl) { emojiEl.textContent = profile.avatarEmoji; emojiEl.style.display = ''; }
+    if (imgEl)   imgEl.style.display = 'none';
+    if (profile.avatarBg) circle.style.background = profile.avatarBg;
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COOKING TIMER (stopwatch + countdown)
+// ═══════════════════════════════════════════════════════════════════════════
+const _timerState = {}; // keyed by recipe id
+
+function _getTs(id) {
+  if (!_timerState[id]) {
+    _timerState[id] = { mode:'timer', running:false, elapsed:0, target:0, interval:null, startedAt:0 };
+  }
+  return _timerState[id];
+}
+
+function _fmtTime(secs) {
+  const s = secs < 0 ? 0 : secs;
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+function setTimerMode(id, mode) {
+  const ts = _getTs(id);
+  if (ts.running) timerPause(id);
+  timerReset(id);
+  ts.mode = mode;
+  document.getElementById(`ctmode-timer-${id}`)?.classList.toggle('active', mode==='timer');
+  document.getElementById(`ctmode-stopwatch-${id}`)?.classList.toggle('active', mode==='stopwatch');
+  const lbl = document.getElementById(`ctimer-label-${id}`);
+  if (lbl) lbl.textContent = mode === 'timer' ? 'Установи время и нажми ▶' : 'Нажми ▶ чтобы начать';
+}
+
+function setTimerPreset(id, totalSecs) {
+  const ts = _getTs(id);
+  if (ts.running) timerPause(id);
+  ts.target = totalSecs;
+  ts.elapsed = 0;
+  ts.mode = 'timer';
+  document.getElementById(`ctmode-timer-${id}`)?.classList.add('active');
+  document.getElementById(`ctmode-stopwatch-${id}`)?.classList.remove('active');
+  const h = Math.floor(totalSecs/3600);
+  const m = Math.floor((totalSecs%3600)/60);
+  const s = totalSecs % 60;
+  const hi = document.getElementById(`ctimer-h-${id}`);
+  const mi = document.getElementById(`ctimer-m-${id}`);
+  const si = document.getElementById(`ctimer-s-${id}`);
+  if (hi) hi.value = h;
+  if (mi) mi.value = m;
+  if (si) si.value = s;
+  _updateTimerDisplay(id);
+}
+
+function _getTargetFromInputs(id) {
+  const h = parseInt(document.getElementById(`ctimer-h-${id}`)?.value)||0;
+  const m = parseInt(document.getElementById(`ctimer-m-${id}`)?.value)||0;
+  const s = parseInt(document.getElementById(`ctimer-s-${id}`)?.value)||0;
+  return h*3600 + m*60 + s;
+}
+
+function timerPlay(id) {
+  const ts = _getTs(id);
+  if (ts.running) return;
+  if (ts.mode === 'timer' && ts.target === 0) {
+    ts.target = _getTargetFromInputs(id);
+    if (ts.target === 0) { showToast('⏱ Установи время таймера'); return; }
+  }
+  ts.running = true;
+  ts.startedAt = Date.now() - ts.elapsed * 1000;
+  const digits = document.getElementById(`ctimer-digits-${id}`);
+  if (digits) digits.classList.add('running');
+  ts.interval = setInterval(() => {
+    const now = Date.now();
+    ts.elapsed = Math.round((now - ts.startedAt) / 1000);
+    _updateTimerDisplay(id);
+    if (ts.mode === 'timer' && ts.elapsed >= ts.target) {
+      timerDone(id);
+    }
+  }, 1000);
+  _updateTimerDisplay(id);
+  const lbl = document.getElementById(`ctimer-label-${id}`);
+  if (lbl) lbl.textContent = ts.mode === 'timer' ? '⏳ Таймер идёт...' : '⏱ Секундомер запущен';
+}
+
+function timerPause(id) {
+  const ts = _getTs(id);
+  clearInterval(ts.interval);
+  ts.running = false;
+  const digits = document.getElementById(`ctimer-digits-${id}`);
+  if (digits) digits.classList.remove('running');
+  const lbl = document.getElementById(`ctimer-label-${id}`);
+  if (lbl) lbl.textContent = '⏸ На паузе — нажми ▶ продолжить';
+}
+
+function timerReset(id) {
+  const ts = _getTs(id);
+  clearInterval(ts.interval);
+  ts.running = false;
+  ts.elapsed = 0;
+  ts.target = 0;
+  const digits = document.getElementById(`ctimer-digits-${id}`);
+  if (digits) { digits.textContent = '00:00:00'; digits.classList.remove('running'); }
+  const lbl = document.getElementById(`ctimer-label-${id}`);
+  if (lbl) lbl.textContent = ts.mode === 'timer' ? 'Установи время и нажми ▶' : 'Нажми ▶ чтобы начать';
+}
+
+function _updateTimerDisplay(id) {
+  const ts = _getTs(id);
+  const digits = document.getElementById(`ctimer-digits-${id}`);
+  if (!digits) return;
+  if (ts.mode === 'stopwatch') {
+    digits.textContent = _fmtTime(ts.elapsed);
+  } else {
+    const remaining = Math.max(0, ts.target - ts.elapsed);
+    digits.textContent = _fmtTime(remaining);
+    // Color goes red when < 60 seconds remain
+    digits.style.color = (remaining <= 60 && ts.running) ? '#C0504D' : '';
+  }
+}
+
+function timerDone(id) {
+  timerPause(id);
+  const ts = _getTs(id);
+  ts.elapsed = ts.target;
+  const digits = document.getElementById(`ctimer-digits-${id}`);
+  if (digits) { digits.textContent = '00:00:00'; digits.style.color = '#6B9E78'; }
+  const lbl = document.getElementById(`ctimer-label-${id}`);
+  if (lbl) lbl.textContent = '✅ Время вышло!';
+  showToast('⏱ Таймер завершён! Блюдо готово 🍽');
+  // Browser notification if available
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification('⏱ Таймер завершён!', { body: 'Время приготовления вышло!' });
+  } else if ('Notification' in window && Notification.permission !== 'denied') {
+    Notification.requestPermission();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MULTILANG TABS: Ingredients / Steps / Notes
+// ═══════════════════════════════════════════════════════════════════════════
+function switchLangTab(tab) {
+  ['main','en','ru','vi'].forEach(t => {
+    document.getElementById('ltab-'+t)?.classList.toggle('active', t===tab);
+    document.getElementById('lpanel-'+t)?.classList.toggle('active', t===tab);
+  });
+}
+
+// Ingredient row for secondary language panels
+function addIngredientRowLang(lang, ing = null) {
+  const UNITS = ['г','мл','шт','ч.л.','ст.л.','kg','oz','cup'];
+  const container = document.getElementById(`f-ingredients-${lang}`);
+  if (!container) return;
+  const id = `ing-${lang}-${Date.now()}`;
+  const row = document.createElement('div');
+  row.className = 'ing-row-grid';
+  row.id = id;
+  const unitOpts = UNITS.map(u => `<option value="${u}"${(ing?.unit||'г')===u?' selected':''}>${u}</option>`).join('');
+  const placeholder = lang==='en'?'Ingredient':lang==='ru'?'Ингредиент':'Nguyên liệu';
+  row.innerHTML = `
+    <input type="text" placeholder="${placeholder}" value="${ing?.name||''}" class="ing-name-input-${lang}"/>
+    <input type="number" placeholder="0" value="${ing?.amount||''}" class="ing-amount-input" min="0"/>
+    <select class="ing-unit-input">${unitOpts}</select>
+    <button class="btn btn-danger btn-icon" onclick="document.getElementById('${id}').remove()">✕</button>`;
+  container.appendChild(row);
+}
+
+// Step row for secondary language panels
+function addStepRowLang(lang, step = '') {
+  const container = document.getElementById(`f-steps-${lang}`);
+  if (!container) return;
+  const idx = container.children.length + 1;
+  const sid = `step-${lang}-${Date.now()}`;
+  const placeholder = lang==='en'?`Step ${idx}`:lang==='ru'?`Шаг ${idx}`:`Bước ${idx}`;
+  const text = typeof step === 'string' ? step : (step.text||'');
+  const row = document.createElement('div');
+  row.className = 'step-row'; row.id = sid;
+  row.innerHTML = `
+    <div class="step-detail-header" style="display:flex;gap:10px;align-items:flex-start">
+      <div class="step-num" style="min-width:26px">${idx}</div>
+      <textarea class="step-text-input-${lang}" rows="2" style="flex:1;resize:vertical" placeholder="${placeholder}">${text}</textarea>
+      <button class="btn btn-danger btn-icon btn-sm" onclick="this.closest('.step-row').remove()">✕</button>
+    </div>`;
+  container.appendChild(row);
+}
+
+// Extend clearForm to also clear lang panels
+const _origClearForm = window.clearForm;
+window.clearForm = function() {
+  _origClearForm?.();
+  ['en','ru','vi'].forEach(l => {
+    const ci = document.getElementById(`f-ingredients-${l}`); if(ci) ci.innerHTML='';
+    const cs = document.getElementById(`f-steps-${l}`); if(cs) cs.innerHTML='';
+    const cn = document.getElementById(`f-notes-${l}-text`); if(cn) cn.value='';
+  });
+  switchLangTab('main');
+};
+
+// Extend fillForm to also fill lang panels
+const _origFillForm = window.fillForm;
+window.fillForm = function(r) {
+  _origFillForm?.(r);
+  ['en','ru','vi'].forEach(l => {
+    const ci = document.getElementById(`f-ingredients-${l}`); if(ci) ci.innerHTML='';
+    const cs = document.getElementById(`f-steps-${l}`); if(cs) cs.innerHTML='';
+    // Fill secondary lang ingredients
+    const ings = r.ingredientsI18n?.[l] || [];
+    ings.forEach(ing => addIngredientRowLang(l, ing));
+    // Fill secondary lang steps
+    const steps = r.stepsI18n?.[l] || [];
+    steps.forEach(s => addStepRowLang(l, s));
+    // Fill notes
+    const ni = document.getElementById(`f-notes-${l}-text`);
+    if (ni) ni.value = r.notesI18n?.[l] || '';
+  });
+  switchLangTab('main');
+};
+
+// Extend saveRecipeForm to collect lang panels data
+const _origSaveRecipeForm = window.saveRecipeForm;
+window.saveRecipeForm = function(mode = 'publish', silent = false) {
+  // Collect extra multilang ingredients/steps before saving
+  ['en','ru','vi'].forEach(l => {
+    // Store into hidden inputs so existing save fn can pick them up
+    // We patch the recipe object post-save instead
+  });
+  _origSaveRecipeForm?.(mode, silent);
+  // Now patch the last-saved recipe with extra i18n data
+  const id = document.getElementById('f-id')?.value;
+  if (!id) return;
+  const idx = recipes.findIndex(r => r.id === id);
+  if (idx < 0) return;
+
+  const ingredientsI18n = {};
+  const stepsI18n = {};
+  ['en','ru','vi'].forEach(l => {
+    // Ingredients
+    const rows = document.querySelectorAll(`#f-ingredients-${l} .ing-row-grid`);
+    const ings = Array.from(rows).map(row => ({
+      name: row.querySelector(`.ing-name-input-${l}`)?.value || '',
+      amount: parseFloat(row.querySelector('.ing-amount-input')?.value)||0,
+      unit: row.querySelector('.ing-unit-input')?.value||'г',
+    })).filter(i => i.name);
+    if (ings.length) ingredientsI18n[l] = ings;
+    // Steps
+    const srows = document.querySelectorAll(`#f-steps-${l} .step-row`);
+    const steps = Array.from(srows).map(row => ({
+      text: row.querySelector(`.step-text-input-${l}`)?.value?.trim()||'',
+    })).filter(s=>s.text);
+    if (steps.length) stepsI18n[l] = steps;
+    // Notes
+    const noteVal = document.getElementById(`f-notes-${l}-text`)?.value||'';
+    if (noteVal && recipes[idx].notesI18n) {
+      recipes[idx].notesI18n[l] = noteVal;
+    }
+  });
+  if (Object.keys(ingredientsI18n).length) recipes[idx].ingredientsI18n = ingredientsI18n;
+  if (Object.keys(stepsI18n).length) recipes[idx].stepsI18n = stepsI18n;
+  save();
+};
+
