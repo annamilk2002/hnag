@@ -602,15 +602,77 @@
   /* ── PROFILE ── */
   .profile-box {
     background: var(--beige-card); border: 1px solid var(--border-soft);
-    border-radius: var(--radius); padding: 32px; max-width: 500px;
+    border-radius: var(--radius); padding: 32px; max-width: 560px;
     box-shadow: var(--shadow);
   }
   .avatar {
-    width: 76px; height: 76px; border-radius: 50%;
+    width: 100px; height: 100px; border-radius: 50%;
     background: linear-gradient(135deg, var(--warm-pale), var(--blush));
     display: flex; align-items: center; justify-content: center;
-    font-size: 30px; margin-bottom: 24px;
-    border: 3px solid var(--warm-light); box-shadow: 0 4px 16px rgba(184,113,78,0.2);
+    font-size: 36px;
+    border: 4px solid var(--warm-light); box-shadow: 0 4px 16px rgba(184,113,78,0.2);
+    overflow: hidden; cursor: pointer; position: relative; flex-shrink: 0;
+    transition: box-shadow .2s;
+  }
+  .avatar:hover { box-shadow: 0 6px 24px rgba(184,113,78,0.38); }
+  .avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; display:block; }
+  .avatar-area {
+    display: flex; align-items: center; gap: 20px; margin-bottom: 24px; flex-wrap: wrap;
+  }
+  .avatar-actions { display: flex; flex-direction: column; gap: 8px; }
+  .avatar-btn {
+    padding: 8px 16px; border-radius: var(--radius-sm); border: 1.5px solid var(--border);
+    background: var(--cream); color: var(--text-muted); font-size: 12px; font-weight: 600;
+    cursor: pointer; font-family: var(--font-body); transition: all .18s;
+    display: flex; align-items: center; gap: 6px; white-space: nowrap;
+  }
+  .avatar-btn:hover { border-color: var(--warm); color: var(--warm-dark); background: var(--warm-pale); }
+  .avatar-btn.primary { background: var(--warm); color: #fff; border-color: var(--warm); }
+  .avatar-btn.primary:hover { background: var(--warm-hover); }
+
+  /* Avatar generator modal */
+  .avgen-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(46,33,24,0.55); backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  .avgen-box {
+    background: var(--cream); border-radius: var(--radius);
+    padding: 28px 28px 24px; max-width: 480px; width: 100%;
+    box-shadow: var(--shadow-lg); animation: fadeUp .3s cubic-bezier(.4,0,.2,1);
+  }
+  .avgen-title { font-family: var(--font-display); font-size: 22px; font-style: italic;
+    color: var(--warm-dark); margin-bottom: 18px; }
+  .avgen-preview { display: flex; justify-content: center; margin-bottom: 20px; }
+  .avgen-canvas {
+    width: 140px; height: 140px; border-radius: 50%;
+    border: 4px solid var(--warm-light); box-shadow: var(--shadow-md);
+  }
+  .avgen-controls { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
+  .avgen-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .avgen-label { font-size: 12px; font-weight: 700; color: var(--text-muted);
+    min-width: 80px; letter-spacing: .3px; }
+  .avgen-emoji-grid { display: flex; gap: 6px; flex-wrap: wrap; }
+  .avgen-emoji-btn {
+    width: 36px; height: 36px; border-radius: 10px; border: 2px solid transparent;
+    font-size: 20px; cursor: pointer; background: var(--beige-deep);
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s; line-height: 1;
+  }
+  .avgen-emoji-btn:hover { transform: scale(1.18); }
+  .avgen-emoji-btn.active { border-color: var(--warm); background: var(--warm-pale); }
+  .avgen-color-grid { display: flex; gap: 7px; flex-wrap: wrap; }
+  .avgen-color-swatch {
+    width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+    border: 3px solid transparent; transition: transform .15s, border-color .15s; flex-shrink: 0;
+  }
+  .avgen-color-swatch:hover { transform: scale(1.22); }
+  .avgen-color-swatch.active { border-color: var(--warm-dark); }
+  .avgen-initials-input {
+    padding: 7px 12px; border-radius: var(--radius-xs);
+    border: 1.5px solid var(--border); background: var(--beige);
+    font-family: var(--font-body); font-size: 15px; font-weight: 700; color: var(--text);
+    width: 80px; text-align: center; text-transform: uppercase; letter-spacing: 2px;
   }
 
   /* ── TOAST ── */
@@ -936,38 +998,6 @@
   }
   .timer-preset-btn:hover { border-color: var(--warm); color: var(--warm); background: var(--warm-pale); }
 
-  /* ── MULTILANG TABS (ingredients / steps / notes) ── */
-  .mlang-tab-bar {
-    display: flex; gap: 0; margin-bottom: 0;
-    border-bottom: 2px solid var(--border-soft);
-    flex-wrap: wrap;
-  }
-  .mlang-tab {
-    padding: 8px 16px; border: none; border-bottom: 2px solid transparent;
-    margin-bottom: -2px; cursor: pointer; font-size: 13px; font-weight: 600;
-    font-family: var(--font-body); color: var(--text-muted);
-    background: transparent; transition: all .18s; display: flex; align-items: center; gap: 5px;
-    border-radius: var(--radius-xs) var(--radius-xs) 0 0;
-  }
-  .mlang-tab.active {
-    color: var(--warm-dark); border-bottom-color: var(--warm);
-    background: var(--warm-pale);
-  }
-  .mlang-tab:hover:not(.active) { color: var(--text); background: var(--beige-deep); }
-  .mlang-tab-panel { display: none; }
-  .mlang-tab-panel.active { display: block; }
-  .mlang-tab-content {
-    border: 1px solid var(--border-soft); border-top: none;
-    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-    padding: 16px; background: var(--cream); margin-bottom: 20px;
-  }
-  .mlang-copy-hint {
-    font-size: 11px; color: var(--text-light); font-style: italic;
-    margin-bottom: 12px; padding: 6px 10px; background: var(--beige);
-    border-radius: var(--radius-xs); border-left: 3px solid var(--warm-light);
-  }
-  .mlang-note-textarea { width: 100%; box-sizing: border-box; }
-
 </style>
 </head>
 <body>
@@ -1090,10 +1120,26 @@
   <!-- PROFILE TAB -->
   <div id="tab-profile" class="hidden">
     <div class="profile-box">
-      <div class="avatar">👤</div>
+
+      <!-- Avatar area -->
+      <div class="avatar-area">
+        <div class="avatar" id="profile-avatar" onclick="document.getElementById('profile-photo-input').click()" title="Нажми, чтобы загрузить фото">
+          <span id="profile-avatar-emoji">👤</span>
+          <img id="profile-avatar-img" src="" alt="" style="display:none"/>
+        </div>
+        <div class="avatar-actions">
+          <label class="avatar-btn" style="cursor:pointer">
+            📷 Загрузить фото
+            <input type="file" id="profile-photo-input" accept="image/*" style="display:none" onchange="handleProfilePhotoUpload(event)"/>
+          </label>
+          <button class="avatar-btn" onclick="openAvatarGenerator()">🎨 Создать аватарку</button>
+          <button class="avatar-btn" id="profile-avatar-remove" onclick="removeProfilePhoto()" style="display:none;color:#C0504D;border-color:#f5c6c6">✕ Удалить фото</button>
+        </div>
+      </div>
+
       <div class="mb16">
         <label data-i="profile.name">Name</label>
-        <input type="text" id="profile-name"/>
+        <input type="text" id="profile-name" oninput="scheduleAvatarInitials()"/>
       </div>
       <div class="mb16">
         <label data-i="profile.goal">Calorie goal / day</label>
@@ -1104,6 +1150,69 @@
         <textarea id="profile-notes" rows="3"></textarea>
       </div>
       <button class="btn btn-primary" onclick="saveProfile()"><span data-i="profile.save">Save Profile</span></button>
+    </div>
+
+    <!-- Avatar Generator Modal -->
+    <div class="avgen-overlay" id="avgen-modal" style="display:none" onclick="if(event.target===this)closeAvatarGenerator()">
+      <div class="avgen-box">
+        <div class="avgen-title">🎨 Создать аватарку</div>
+
+        <div class="avgen-preview">
+          <canvas id="avgen-canvas" class="avgen-canvas" width="280" height="280"></canvas>
+        </div>
+
+        <div class="avgen-controls">
+          <!-- Mode tabs -->
+          <div class="avgen-row">
+            <span class="avgen-label">Режим</span>
+            <div style="display:flex;gap:6px">
+              <button class="avatar-btn primary" id="avgen-mode-emoji" onclick="avgenSetMode('emoji')">😊 Эмодзи</button>
+              <button class="avatar-btn" id="avgen-mode-initials" onclick="avgenSetMode('initials')">АБ Инициалы</button>
+            </div>
+          </div>
+
+          <!-- Emoji picker (shown in emoji mode) -->
+          <div class="avgen-row" id="avgen-emoji-row">
+            <span class="avgen-label">Символ</span>
+            <div class="avgen-emoji-grid" id="avgen-emoji-grid"></div>
+          </div>
+
+          <!-- Initials input (shown in initials mode) -->
+          <div class="avgen-row" id="avgen-initials-row" style="display:none">
+            <span class="avgen-label">Инициалы</span>
+            <input type="text" class="avgen-initials-input" id="avgen-initials" maxlength="2" placeholder="АБ" oninput="avgenDraw()"/>
+          </div>
+
+          <!-- Background color -->
+          <div class="avgen-row">
+            <span class="avgen-label">Фон</span>
+            <div class="avgen-color-grid" id="avgen-bg-grid"></div>
+          </div>
+
+          <!-- Accent color -->
+          <div class="avgen-row">
+            <span class="avgen-label">Акцент</span>
+            <div class="avgen-color-grid" id="avgen-accent-grid"></div>
+          </div>
+
+          <!-- Style -->
+          <div class="avgen-row">
+            <span class="avgen-label">Стиль</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="avgen-emoji-btn active" id="avgen-style-circle" onclick="avgenSetStyle('circle')" title="Круг">⬤</button>
+              <button class="avgen-emoji-btn" id="avgen-style-rounded" onclick="avgenSetStyle('rounded')" title="Скруглённый">▣</button>
+              <button class="avgen-emoji-btn" id="avgen-style-gradient" onclick="avgenSetStyle('gradient')" title="Градиент">🌈</button>
+              <button class="avgen-emoji-btn" id="avgen-style-pattern" onclick="avgenSetStyle('pattern')" title="Паттерн">▦</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+          <button class="avatar-btn" onclick="closeAvatarGenerator()">Отмена</button>
+          <button class="avatar-btn" onclick="avgenRandomize()">🎲 Случайный</button>
+          <button class="avatar-btn primary" onclick="applyGeneratedAvatar()">✅ Применить</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1637,10 +1746,11 @@
       <span id="translate-status" style="font-size:12px;color:var(--text-muted)"></span>
     </div>
 
-    <!-- Hidden multilang fields for name/desc/story -->
+    <!-- Hidden multilang fields -->
     <input type="hidden" id="f-name-ru"/> <input type="hidden" id="f-name-vi"/> <input type="hidden" id="f-name-en"/>
     <input type="hidden" id="f-desc-ru"/> <input type="hidden" id="f-desc-vi"/> <input type="hidden" id="f-desc-en"/>
     <input type="hidden" id="f-story-ru"/> <input type="hidden" id="f-story-vi"/> <input type="hidden" id="f-story-en"/>
+    <input type="hidden" id="f-notes-ru"/> <input type="hidden" id="f-notes-vi"/> <input type="hidden" id="f-notes-en"/>
 
     <div class="grid-3 mb16">
       <div><label data-i="recipe.servings">Порции / Servings</label><input type="number" id="f-servings" value="2" min="1"/></div>
@@ -1699,106 +1809,26 @@
       </div>
     </div>
 
-    <!-- Ingredients / Steps / Notes — multilang tabs -->
-    <div class="mb4">
-      <div class="mlang-tab-bar" id="mlang-tab-bar">
-        <button class="mlang-tab active" onclick="switchMlangTab('main')" id="mlang-tab-main">🍽 Основной</button>
-        <button class="mlang-tab" onclick="switchMlangTab('en')" id="mlang-tab-en">🇬🇧 English</button>
-        <button class="mlang-tab" onclick="switchMlangTab('ru')" id="mlang-tab-ru">🇷🇺 Русский</button>
-        <button class="mlang-tab" onclick="switchMlangTab('vi')" id="mlang-tab-vi">🇻🇳 Tiếng Việt</button>
-      </div>
-      <div class="mlang-tab-content">
+    <!-- Ingredients -->
+    <div class="mb20">
+      <div class="section-title" data-i="recipe.ingredients">Ingredients</div>
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px">💡 КБЖУ рассчитывается автоматически при добавлении ингредиентов</p>
+      <div id="f-ingredients"></div>
+      <button class="btn btn-secondary btn-sm" onclick="addIngredientRow()">+ <span data-i="recipe.addIngredient">Add Ingredient</span></button>
+    </div>
 
-        <!-- MAIN tab -->
-        <div class="mlang-tab-panel active" id="mlang-panel-main">
-          <!-- Ingredients -->
-          <div class="mb20">
-            <div class="section-title" data-i="recipe.ingredients">Ingredients</div>
-            <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px">💡 КБЖУ рассчитывается автоматически при добавлении ингредиентов</p>
-            <div id="f-ingredients"></div>
-            <button class="btn btn-secondary btn-sm" onclick="addIngredientRow()">+ <span data-i="recipe.addIngredient">Add Ingredient</span></button>
-          </div>
-          <!-- Steps -->
-          <div class="mb20">
-            <div class="section-title" data-i="recipe.steps">Steps</div>
-            <div id="f-steps"></div>
-            <button class="btn btn-secondary btn-sm" onclick="addStepRow()">+ Add Step</button>
-          </div>
-          <!-- Notes -->
-          <div>
-            <label data-i="recipe.notes">Notes</label>
-            <textarea id="f-notes" rows="2" class="mlang-note-textarea"></textarea>
-          </div>
-        </div>
+    <!-- Steps -->
+    <div class="mb20">
+      <div class="section-title" data-i="recipe.steps">Steps</div>
+      <div id="f-steps"></div>
+      <button class="btn btn-secondary btn-sm" onclick="addStepRow()">+ Add Step</button>
+    </div>
 
-        <!-- ENGLISH tab -->
-        <div class="mlang-tab-panel" id="mlang-panel-en">
-          <div class="mlang-copy-hint">🌐 English translation of ingredients, steps and notes. Use 🌐 "Translate all" above to auto-fill, or type manually.</div>
-          <!-- Ingredients EN -->
-          <div class="mb20">
-            <div class="section-title">🥕 Ingredients <span style="font-size:11px;color:var(--text-muted);font-weight:400">(English)</span></div>
-            <div id="f-ingredients-en"></div>
-            <button class="btn btn-secondary btn-sm" onclick="addMlangIngRow('en')">+ Add Ingredient (EN)</button>
-          </div>
-          <!-- Steps EN -->
-          <div class="mb20">
-            <div class="section-title">📋 Steps <span style="font-size:11px;color:var(--text-muted);font-weight:400">(English)</span></div>
-            <div id="f-steps-en"></div>
-            <button class="btn btn-secondary btn-sm" onclick="addMlangStepRow('en')">+ Add Step (EN)</button>
-          </div>
-          <!-- Notes EN -->
-          <div>
-            <label>Notes (English)</label>
-            <textarea id="f-notes-en" rows="2" class="mlang-note-textarea"></textarea>
-          </div>
-        </div>
-
-        <!-- RUSSIAN tab -->
-        <div class="mlang-tab-panel" id="mlang-panel-ru">
-          <div class="mlang-copy-hint">🌐 Перевод ингредиентов, шагов и заметок на русский. Используй 🌐 "Перевести" или заполни вручную.</div>
-          <!-- Ingredients RU -->
-          <div class="mb20">
-            <div class="section-title">🥕 Ингредиенты <span style="font-size:11px;color:var(--text-muted);font-weight:400">(Русский)</span></div>
-            <div id="f-ingredients-ru"></div>
-            <button class="btn btn-secondary btn-sm" onclick="addMlangIngRow('ru')">+ Добавить (RU)</button>
-          </div>
-          <!-- Steps RU -->
-          <div class="mb20">
-            <div class="section-title">📋 Шаги <span style="font-size:11px;color:var(--text-muted);font-weight:400">(Русский)</span></div>
-            <div id="f-steps-ru"></div>
-            <button class="btn btn-secondary btn-sm" onclick="addMlangStepRow('ru')">+ Добавить шаг (RU)</button>
-          </div>
-          <!-- Notes RU -->
-          <div>
-            <label>Заметки (Русский)</label>
-            <textarea id="f-notes-ru" rows="2" class="mlang-note-textarea"></textarea>
-          </div>
-        </div>
-
-        <!-- VIETNAMESE tab -->
-        <div class="mlang-tab-panel" id="mlang-panel-vi">
-          <div class="mlang-copy-hint">🌐 Bản dịch nguyên liệu, các bước và ghi chú sang tiếng Việt. Dùng 🌐 "Dịch tất cả" hoặc nhập tay.</div>
-          <!-- Ingredients VI -->
-          <div class="mb20">
-            <div class="section-title">🥕 Nguyên liệu <span style="font-size:11px;color:var(--text-muted);font-weight:400">(Tiếng Việt)</span></div>
-            <div id="f-ingredients-vi"></div>
-            <button class="btn btn-secondary btn-sm" onclick="addMlangIngRow('vi')">+ Thêm nguyên liệu (VI)</button>
-          </div>
-          <!-- Steps VI -->
-          <div class="mb20">
-            <div class="section-title">📋 Các bước <span style="font-size:11px;color:var(--text-muted);font-weight:400">(Tiếng Việt)</span></div>
-            <div id="f-steps-vi"></div>
-            <button class="btn btn-secondary btn-sm" onclick="addMlangStepRow('vi')">+ Thêm bước (VI)</button>
-          </div>
-          <!-- Notes VI -->
-          <div>
-            <label>Ghi chú (Tiếng Việt)</label>
-            <textarea id="f-notes-vi" rows="2" class="mlang-note-textarea"></textarea>
-          </div>
-        </div>
-
-      </div><!-- end mlang-tab-content -->
-    </div><!-- end multilang block -->
+    <!-- Notes -->
+    <div class="mb24">
+      <label data-i="recipe.notes">Notes</label>
+      <textarea id="f-notes" rows="2"></textarea>
+    </div>
 
     <input type="hidden" id="f-id"/>
     <input type="hidden" id="f-photo-data"/>
@@ -2271,12 +2301,7 @@ function buildDetailHTML(r, scaledServings) {
   const displayStory = r.storyI18n?.[lang] || r.story;
   const displayNotes = r.notesI18n?.[lang] || r.notes;
 
-  // Use translated ingredients if available for current lang
-  const displayIngs = (lang !== 'main' && r.ingredientsI18n?.[lang]?.length)
-    ? r.ingredientsI18n[lang]
-    : r.ingredients;
-
-  const ings = displayIngs.map(ing => {
+  const ings = r.ingredients.map(ing => {
     const sc = Math.round(ing.amount * ratio * 10) / 10;
     const sub = r.substitutes?.[ing.id];
     const orig = ratio !== 1 ? `<span class="ing-orig">(orig: ${ing.amount})</span>` : '';
@@ -2286,12 +2311,7 @@ function buildDetailHTML(r, scaledServings) {
     </div>`;
   }).join('');
 
-  // Use translated steps if available for current lang
-  const displaySteps = (lang !== 'main' && r.stepsI18n?.[lang]?.length)
-    ? r.stepsI18n[lang]
-    : (r.steps||[]);
-
-  const steps = displaySteps.map((s,i) => {
+  const steps = (r.steps||[]).map((s,i) => {
     const text  = typeof s === 'string' ? s : (s.text || '');
     const photo = typeof s === 'object' ? (s.photo || '') : '';
     const video = typeof s === 'object' ? (s.video || '') : '';
@@ -2463,9 +2483,9 @@ function openEditModal(id) {
 
 function clearForm() {
   ['f-name','f-description','f-story','f-country','f-notes'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
-  // clear hidden multilang name/desc/story
+  // clear hidden multilang
   ['f-name-ru','f-name-vi','f-name-en','f-desc-ru','f-desc-vi','f-desc-en',
-   'f-story-ru','f-story-vi','f-story-en'].forEach(id => {
+   'f-story-ru','f-story-vi','f-story-en','f-notes-ru','f-notes-vi','f-notes-en'].forEach(id => {
     const el = document.getElementById(id); if(el) el.value='';
   });
   document.getElementById('f-servings').value = 2;
@@ -2489,8 +2509,6 @@ function clearForm() {
   document.getElementById('kbju-auto-badge').classList.add('hidden');
   addIngredientRow();
   addStepRow();
-  // Clear multilang tabs
-  if (typeof clearMlangTabs === 'function') clearMlangTabs();
 }
 
 function fillForm(r) {
@@ -2535,8 +2553,6 @@ function fillForm(r) {
   // Steps
   document.getElementById('f-steps').innerHTML = '';
   (r.steps||[]).forEach(s => addStepRow(s));
-  // Fill multilang tabs
-  if (typeof fillMlangTabs === 'function') fillMlangTabs(r);
   // check if was auto-translated
   if (r.nameI18n?.ru && r.nameI18n?.en && r.nameI18n?.vi) {
     document.getElementById('kbju-auto-badge').classList.remove('hidden');
@@ -2784,21 +2800,9 @@ function saveRecipeForm(mode = 'publish', silent = false) {
     vi: document.getElementById('f-story-vi').value || document.getElementById('f-story').value,
   };
   const notesI18n = {
-    ru: document.getElementById('f-notes-ru')?.value || document.getElementById('f-notes').value,
-    en: document.getElementById('f-notes-en')?.value || document.getElementById('f-notes').value,
-    vi: document.getElementById('f-notes-vi')?.value || document.getElementById('f-notes').value,
-  };
-
-  // Collect multilang ingredients and steps
-  const ingredientsI18n = {
-    en: (typeof collectMlangIngs === 'function') ? collectMlangIngs('en') : [],
-    ru: (typeof collectMlangIngs === 'function') ? collectMlangIngs('ru') : [],
-    vi: (typeof collectMlangIngs === 'function') ? collectMlangIngs('vi') : [],
-  };
-  const stepsI18n = {
-    en: (typeof collectMlangSteps === 'function') ? collectMlangSteps('en') : [],
-    ru: (typeof collectMlangSteps === 'function') ? collectMlangSteps('ru') : [],
-    vi: (typeof collectMlangSteps === 'function') ? collectMlangSteps('vi') : [],
+    ru: document.getElementById('f-notes-ru').value || document.getElementById('f-notes').value,
+    en: document.getElementById('f-notes-en').value || document.getElementById('f-notes').value,
+    vi: document.getElementById('f-notes-vi').value || document.getElementById('f-notes').value,
   };
 
   const cookingHours = parseInt(document.getElementById('f-hours').value) || 0;
@@ -2832,8 +2836,6 @@ function saveRecipeForm(mode = 'publish', silent = false) {
       carbs: parseInt(document.getElementById('f-carbs').value) || 0,
     },
     ingredients,
-    stepsI18n,
-    ingredientsI18n,
     steps,
     substitutes: existing?.substitutes || {},
     viewedAt: existing?.viewedAt || [],
@@ -3095,13 +3097,318 @@ function loadProfileForm() {
   document.getElementById('profile-name').value = profile.name;
   document.getElementById('profile-cal').value = profile.calorieGoal;
   document.getElementById('profile-notes').value = profile.notes || '';
+  applyProfileAvatar();
 }
+
 function saveProfile() {
   profile.name = document.getElementById('profile-name').value;
   profile.calorieGoal = parseInt(document.getElementById('profile-cal').value) || 2000;
   profile.notes = document.getElementById('profile-notes').value;
+  // avatar is already stored in profile.avatar by the upload/generate functions
   save();
-  alert('Profile saved!');
+  showToast('✅ Профиль сохранён!');
+}
+
+// ─── PROFILE AVATAR ──────────────────────────────────────────────────────────
+
+function applyProfileAvatar() {
+  const img = document.getElementById('profile-avatar-img');
+  const emoji = document.getElementById('profile-avatar-emoji');
+  const removeBtn = document.getElementById('profile-avatar-remove');
+  if (!img || !emoji) return;
+  if (profile.avatar) {
+    img.src = profile.avatar;
+    img.style.display = '';
+    emoji.style.display = 'none';
+    if (removeBtn) removeBtn.style.display = '';
+  } else {
+    img.style.display = 'none';
+    emoji.style.display = '';
+    if (removeBtn) removeBtn.style.display = 'none';
+  }
+}
+
+function handleProfilePhotoUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    profile.avatar = ev.target.result;
+    applyProfileAvatar();
+    save();
+    showToast('📷 Фото профиля обновлено!');
+  };
+  reader.readAsDataURL(file);
+  // reset input so same file can be re-selected
+  e.target.value = '';
+}
+
+function removeProfilePhoto() {
+  profile.avatar = '';
+  applyProfileAvatar();
+  save();
+  showToast('Фото удалено');
+}
+
+let _avgenInitialsTimer = null;
+function scheduleAvatarInitials() {
+  // If no custom avatar set, offer auto-initials preview
+  clearTimeout(_avgenInitialsTimer);
+  _avgenInitialsTimer = setTimeout(() => {
+    if (!profile.avatar && _avgen.mode === 'initials') avgenDraw();
+  }, 400);
+}
+
+// ─── AVATAR GENERATOR ────────────────────────────────────────────────────────
+
+const AVGEN_EMOJIS = [
+  '👩‍🍳','🧑‍🍳','👨‍🍳','🍜','🍱','🥗','🍣','🍕','🥘','🍲',
+  '🌸','🌿','🦋','🐱','🐶','🦊','🐼','🦁','🐻','🌈',
+  '⭐','🌙','☀️','🎨','🎵','🎯','💎','🔥','❤️','✨',
+];
+
+const AVGEN_BG_COLORS = [
+  '#F5E8DC','#EAF0E8','#E8F0F5','#F5E8F0','#F0EAF5',
+  '#FFF3CD','#D4EDDA','#CCE5FF','#F8D7DA','#E2D9F3',
+  '#2E2118','#3A5A3A','#1A3A5A','#5A1A2E','#3A1A5A',
+];
+
+const AVGEN_ACCENT_COLORS = [
+  '#B8714E','#6B9E78','#5A8AB8','#C06090','#8A70C0',
+  '#C8845A','#4A9E6A','#3A7AB0','#B05080','#7A60B0',
+  '#fff','#F7F3EC','#FFD700','#FF6B6B','#6BFFD7',
+];
+
+const _avgen = {
+  mode: 'emoji',    // 'emoji' | 'initials'
+  emoji: '👩‍🍳',
+  bg: '#F5E8DC',
+  accent: '#B8714E',
+  style: 'circle',  // 'circle' | 'rounded' | 'gradient' | 'pattern'
+};
+
+function openAvatarGenerator() {
+  // Populate grids
+  const emojiGrid = document.getElementById('avgen-emoji-grid');
+  emojiGrid.innerHTML = AVGEN_EMOJIS.map((e,i) =>
+    `<button class="avgen-emoji-btn${_avgen.emoji===e?' active':''}" onclick="avgenSelectEmoji('${e}',this)">${e}</button>`
+  ).join('');
+
+  const bgGrid = document.getElementById('avgen-bg-grid');
+  bgGrid.innerHTML = AVGEN_BG_COLORS.map(c =>
+    `<div class="avgen-color-swatch${_avgen.bg===c?' active':''}" style="background:${c}" onclick="avgenSelectBg('${c}',this)" title="${c}"></div>`
+  ).join('');
+
+  const accentGrid = document.getElementById('avgen-accent-grid');
+  accentGrid.innerHTML = AVGEN_ACCENT_COLORS.map(c =>
+    `<div class="avgen-color-swatch${_avgen.accent===c?' active':''}" style="background:${c};border:2px solid rgba(0,0,0,0.1)" onclick="avgenSelectAccent('${c}',this)" title="${c}"></div>`
+  ).join('');
+
+  // Initials: prefill from name
+  const nameEl = document.getElementById('profile-name');
+  if (nameEl && nameEl.value) {
+    const parts = nameEl.value.trim().split(/\s+/);
+    const initials = parts.length >= 2
+      ? (parts[0][0] + parts[parts.length-1][0]).toUpperCase()
+      : parts[0].slice(0,2).toUpperCase();
+    const inp = document.getElementById('avgen-initials');
+    if (inp && !inp.value) inp.value = initials;
+  }
+
+  document.getElementById('avgen-modal').style.display = '';
+  avgenSetMode(_avgen.mode);
+  avgenDraw();
+}
+
+function closeAvatarGenerator() {
+  document.getElementById('avgen-modal').style.display = 'none';
+}
+
+function avgenSetMode(mode) {
+  _avgen.mode = mode;
+  document.getElementById('avgen-mode-emoji').className = 'avatar-btn' + (mode==='emoji'?' primary':'');
+  document.getElementById('avgen-mode-initials').className = 'avatar-btn' + (mode==='initials'?' primary':'');
+  document.getElementById('avgen-emoji-row').style.display = mode==='emoji' ? '' : 'none';
+  document.getElementById('avgen-initials-row').style.display = mode==='initials' ? '' : 'none';
+  avgenDraw();
+}
+
+function avgenSetStyle(style) {
+  _avgen.style = style;
+  ['circle','rounded','gradient','pattern'].forEach(s => {
+    const btn = document.getElementById('avgen-style-' + s);
+    if (btn) btn.classList.toggle('active', s === style);
+  });
+  avgenDraw();
+}
+
+function avgenSelectEmoji(em, btn) {
+  _avgen.emoji = em;
+  document.querySelectorAll('#avgen-emoji-grid .avgen-emoji-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  avgenDraw();
+}
+
+function avgenSelectBg(color, el) {
+  _avgen.bg = color;
+  document.querySelectorAll('#avgen-bg-grid .avgen-color-swatch').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  avgenDraw();
+}
+
+function avgenSelectAccent(color, el) {
+  _avgen.accent = color;
+  document.querySelectorAll('#avgen-accent-grid .avgen-color-swatch').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  avgenDraw();
+}
+
+function avgenRandomize() {
+  _avgen.emoji = AVGEN_EMOJIS[Math.floor(Math.random() * AVGEN_EMOJIS.length)];
+  _avgen.bg = AVGEN_BG_COLORS[Math.floor(Math.random() * AVGEN_BG_COLORS.length)];
+  _avgen.accent = AVGEN_ACCENT_COLORS[Math.floor(Math.random() * AVGEN_ACCENT_COLORS.length)];
+  _avgen.style = ['circle','rounded','gradient','pattern'][Math.floor(Math.random()*4)];
+  // Refresh UI
+  document.querySelectorAll('#avgen-emoji-grid .avgen-emoji-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent === _avgen.emoji);
+  });
+  document.querySelectorAll('#avgen-bg-grid .avgen-color-swatch').forEach(b => {
+    b.classList.toggle('active', b.style.background === _avgen.bg);
+  });
+  document.querySelectorAll('#avgen-accent-grid .avgen-color-swatch').forEach(b => {
+    b.classList.toggle('active', b.style.background === _avgen.accent);
+  });
+  ['circle','rounded','gradient','pattern'].forEach(s => {
+    const btn = document.getElementById('avgen-style-' + s);
+    if (btn) btn.classList.toggle('active', s === _avgen.style);
+  });
+  avgenDraw();
+}
+
+function avgenDraw() {
+  const canvas = document.getElementById('avgen-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W/2, cy = H/2, r = W/2 - 4;
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.save();
+
+  // Clip shape
+  ctx.beginPath();
+  if (_avgen.style === 'rounded') {
+    const pad = 14;
+    roundRect(ctx, pad, pad, W-pad*2, H-pad*2, 60);
+  } else {
+    ctx.arc(cx, cy, r, 0, Math.PI*2);
+  }
+  ctx.clip();
+
+  // Background
+  if (_avgen.style === 'gradient') {
+    const grad = ctx.createLinearGradient(0, 0, W, H);
+    grad.addColorStop(0, _avgen.bg);
+    grad.addColorStop(1, _avgen.accent);
+    ctx.fillStyle = grad;
+  } else {
+    ctx.fillStyle = _avgen.bg;
+  }
+  ctx.fillRect(0, 0, W, H);
+
+  // Pattern overlay
+  if (_avgen.style === 'pattern') {
+    ctx.globalAlpha = 0.18;
+    ctx.strokeStyle = _avgen.accent;
+    ctx.lineWidth = 2;
+    for (let i = -W; i < W*2; i += 22) {
+      ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + H, H); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // Accent ring inside
+  if (_avgen.style !== 'gradient') {
+    ctx.strokeStyle = _avgen.accent;
+    ctx.lineWidth = 8;
+    ctx.globalAlpha = 0.22;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r - 10, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore();
+
+  // Content
+  if (_avgen.mode === 'initials') {
+    const inp = document.getElementById('avgen-initials');
+    const text = (inp?.value || '?').toUpperCase().slice(0,2);
+    // Determine contrast color
+    const isDark = isColorDark(_avgen.bg) || _avgen.style === 'gradient';
+    ctx.fillStyle = isDark ? '#fff' : (_avgen.style === 'gradient' ? '#fff' : contrastColor(_avgen.bg));
+    ctx.font = `bold ${text.length===1?110:80}px 'Nunito', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // shadow
+    ctx.shadowColor = 'rgba(0,0,0,0.18)';
+    ctx.shadowBlur = 8;
+    ctx.fillText(text, cx, cy + 5);
+    ctx.shadowBlur = 0;
+  } else {
+    // Emoji
+    ctx.font = '120px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(_avgen.emoji, cx, cy + 8);
+  }
+}
+
+function roundRect(ctx, x, y, w, h, radius) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + w - radius, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+radius);
+  ctx.lineTo(x+w, y+h-radius);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-radius, y+h);
+  ctx.lineTo(x+radius, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-radius);
+  ctx.lineTo(x, y+radius);
+  ctx.quadraticCurveTo(x, y, x+radius, y);
+  ctx.closePath();
+}
+
+function isColorDark(hex) {
+  const c = hex.replace('#','');
+  if (c.length < 6) return false;
+  const r = parseInt(c.slice(0,2),16);
+  const g = parseInt(c.slice(2,4),16);
+  const b = parseInt(c.slice(4,6),16);
+  return (r*0.299 + g*0.587 + b*0.114) < 128;
+}
+
+function contrastColor(hex) {
+  return isColorDark(hex) ? '#fff' : '#2E2118';
+}
+
+function applyGeneratedAvatar() {
+  const canvas = document.getElementById('avgen-canvas');
+  if (!canvas) return;
+  // Export as circular PNG
+  const exportCanvas = document.createElement('canvas');
+  exportCanvas.width = 280; exportCanvas.height = 280;
+  const ectx = exportCanvas.getContext('2d');
+  // Clip circle
+  ectx.beginPath();
+  ectx.arc(140, 140, 140, 0, Math.PI*2);
+  ectx.clip();
+  ectx.drawImage(canvas, 0, 0);
+  const dataUrl = exportCanvas.toDataURL('image/png');
+  profile.avatar = dataUrl;
+  applyProfileAvatar();
+  save();
+  closeAvatarGenerator();
+  showToast('🎨 Аватарка применена!');
 }
 
 // ─── COUNTRIES ───────────────────────────────────────────────────────────────
@@ -3150,43 +3457,23 @@ async function autoTranslateForm() {
 
   if (!name) { alert('Введите название рецепта перед переводом'); return; }
 
-  // Collect main ingredients and steps for translation
-  const mainIngs = Array.from(document.querySelectorAll('#f-ingredients .ing-row-grid')).map(row => ({
-    name: row.querySelector('.ing-name-input')?.value || '',
-    amount: parseFloat(row.querySelector('.ing-amount-input')?.value) || 0,
-    unit: row.querySelector('.ing-unit-input')?.value || 'г',
-  })).filter(i => i.name);
-
-  const mainSteps = Array.from(document.querySelectorAll('#f-steps .step-row')).map(row =>
-    (row.querySelector('.step-text-input')?.value || '').trim()
-  ).filter(Boolean);
-
   const btn = document.getElementById('translate-btn');
   const statusEl = document.getElementById('translate-status');
   btn.disabled = true;
   btn.innerHTML = '<span class="translate-spinner">⏳</span> Переводим...';
   statusEl.textContent = '';
 
-  const prompt = `Переведи поля рецепта на русский (ru), английский (en) и вьетнамский (vi).
+  const prompt = `Переведи следующие поля рецепта на русский (ru), английский (en) и вьетнамский (vi).
 Ответь ТОЛЬКО валидным JSON без markdown, без пояснений.
 
-Поля для перевода:
+Поля:
 - name: "${name}"
 - description: "${desc}"
 - story: "${story}"
 - notes: "${notes}"
-- ingredients: ${JSON.stringify(mainIngs.map(i=>i.name))}
-- steps: ${JSON.stringify(mainSteps)}
 
-Формат ответа (сохраняй структуру):
-{
-  "name":{"ru":"...","en":"...","vi":"..."},
-  "description":{"ru":"...","en":"...","vi":"..."},
-  "story":{"ru":"...","en":"...","vi":"..."},
-  "notes":{"ru":"...","en":"...","vi":"..."},
-  "ingredients":{"ru":["...","..."],"en":["...","..."],"vi":["...","..."]},
-  "steps":{"ru":["...","..."],"en":["...","..."],"vi":["...","..."]}
-}`;
+Формат ответа:
+{"name":{"ru":"...","en":"...","vi":"..."},"description":{"ru":"...","en":"...","vi":"..."},"story":{"ru":"...","en":"...","vi":"..."},"notes":{"ru":"...","en":"...","vi":"..."}}`;
 
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -3194,7 +3481,7 @@ async function autoTranslateForm() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
+        max_tokens: 1000,
         messages: [{ role: 'user', content: prompt }]
       })
     });
@@ -3203,48 +3490,15 @@ async function autoTranslateForm() {
     const clean = text.replace(/```json|```/g,'').trim();
     const parsed = JSON.parse(clean);
 
-    // Fill hidden fields for name/desc/story
+    // Fill hidden fields
     ['ru','vi','en'].forEach(l => {
       const n = document.getElementById('f-name-'+l); if(n) n.value = parsed.name?.[l]||name;
       const d = document.getElementById('f-desc-'+l); if(d) d.value = parsed.description?.[l]||desc;
       const s = document.getElementById('f-story-'+l); if(s) s.value = parsed.story?.[l]||story;
+      const nt= document.getElementById('f-notes-'+l); if(nt) nt.value = parsed.notes?.[l]||notes;
     });
 
-    // Fill lang tab notes
-    ['ru','en','vi'].forEach(l => {
-      const nt = document.getElementById(`f-notes-${l}`);
-      if (nt) nt.value = parsed.notes?.[l] || notes;
-    });
-
-    // Fill lang tab ingredients
-    ['ru','en','vi'].forEach(l => {
-      const translatedNames = parsed.ingredients?.[l] || [];
-      const container = document.getElementById(`f-ingredients-${l}`);
-      if (!container) return;
-      container.innerHTML = '';
-      _mlangIngCount[l] = 0;
-      mainIngs.forEach((ing, idx) => {
-        addMlangIngRow(l, {
-          name: translatedNames[idx] || ing.name,
-          amount: ing.amount,
-          unit: ing.unit,
-        });
-      });
-      if (!mainIngs.length) addMlangIngRow(l);
-    });
-
-    // Fill lang tab steps
-    ['ru','en','vi'].forEach(l => {
-      const translatedSteps = parsed.steps?.[l] || [];
-      const container = document.getElementById(`f-steps-${l}`);
-      if (!container) return;
-      container.innerHTML = '';
-      _mlangStepCount[l] = 0;
-      translatedSteps.forEach(s => addMlangStepRow(l, s));
-      if (!translatedSteps.length) addMlangStepRow(l);
-    });
-
-    statusEl.textContent = `✅ Переведено: ингредиенты, шаги, описание — RU / EN / VI`;
+    statusEl.textContent = `✅ Переведено: RU / EN / VI`;
     statusEl.style.color = 'var(--success)';
     document.getElementById('kbju-auto-badge').classList.remove('hidden');
   } catch(e) {
@@ -4896,169 +5150,6 @@ window.closeModal = function(id) {
     _rt.remaining = 0; _rt.swElapsed = 0;
   }
   if (typeof _origCloseModal === 'function') _origCloseModal(id);
-};
-
-// ─── MULTILANG TABS (ingredients / steps / notes) ────────────────────────────
-
-let _mlangActiveTab = 'main';
-
-function switchMlangTab(tab) {
-  _mlangActiveTab = tab;
-  ['main','en','ru','vi'].forEach(t => {
-    document.getElementById('mlang-tab-' + t)?.classList.toggle('active', t === tab);
-    document.getElementById('mlang-panel-' + t)?.classList.toggle('active', t === tab);
-  });
-}
-
-// ── Ingredient row helpers for language tabs ──
-let _mlangIngCount = {en:0, ru:0, vi:0};
-
-function addMlangIngRow(l, ing = null) {
-  _mlangIngCount[l] = (_mlangIngCount[l] || 0) + 1;
-  const id = `mlang-ing-${l}-${_mlangIngCount[l]}`;
-  const container = document.getElementById(`f-ingredients-${l}`);
-  if (!container) return;
-  const row = document.createElement('div');
-  row.className = 'ing-row-grid';
-  row.id = id;
-  const unitOpts = UNITS.map(u => `<option value="${u}"${(ing?.unit||'г')===u?' selected':''}>${u}</option>`).join('');
-  row.innerHTML = `
-    <input type="text" placeholder="Ingredient" value="${ing?.name||''}" class="mlang-ing-name" data-lang="${l}"/>
-    <input type="number" placeholder="0" value="${ing?.amount||''}" class="mlang-ing-amount" min="0"/>
-    <select class="mlang-ing-unit">${unitOpts}</select>
-    <button class="btn btn-danger btn-icon" onclick="document.getElementById('${id}').remove()">✕</button>`;
-  container.appendChild(row);
-}
-
-// ── Step row helpers for language tabs ──
-let _mlangStepCount = {en:0, ru:0, vi:0};
-
-function addMlangStepRow(l, text = '') {
-  _mlangStepCount[l] = (_mlangStepCount[l] || 0) + 1;
-  const idx = (document.getElementById(`f-steps-${l}`)?.children.length || 0) + 1;
-  const sid = `mlang-step-${l}-${_mlangStepCount[l]}`;
-  const container = document.getElementById(`f-steps-${l}`);
-  if (!container) return;
-  const row = document.createElement('div');
-  row.className = 'step-row';
-  row.id = sid;
-  row.innerHTML = `
-    <div class="step-row-header">
-      <div class="step-num">${idx}</div>
-      <input type="text" class="step-text-input mlang-step-text" value="${(typeof text === 'string' ? text : (text?.text||'')).replace(/"/g,'&quot;')}" placeholder="Step ${idx}" style="flex:1" data-lang="${l}"/>
-      <button class="btn btn-danger btn-icon" style="flex-shrink:0" onclick="this.closest('.step-row').remove();renumberMlangSteps('${l}')">✕</button>
-    </div>`;
-  container.appendChild(row);
-}
-
-function renumberMlangSteps(l) {
-  const container = document.getElementById(`f-steps-${l}`);
-  if (!container) return;
-  Array.from(container.children).forEach((row, i) => {
-    const num = row.querySelector('.step-num');
-    if (num) num.textContent = i + 1;
-  });
-}
-
-// ── Collect multilang ing/steps from UI ──
-function collectMlangIngs(l) {
-  const rows = document.querySelectorAll(`#f-ingredients-${l} .ing-row-grid`);
-  return Array.from(rows).map((row, i) => ({
-    id: 'i' + (i+1),
-    name: row.querySelector('.mlang-ing-name')?.value || '',
-    amount: parseFloat(row.querySelector('.mlang-ing-amount')?.value) || 0,
-    unit: row.querySelector('.mlang-ing-unit')?.value || 'г',
-  })).filter(x => x.name);
-}
-
-function collectMlangSteps(l) {
-  const rows = document.querySelectorAll(`#f-steps-${l} .step-row`);
-  return Array.from(rows).map(row => {
-    const text = (row.querySelector('.step-text-input')?.value || '').trim();
-    return text ? { text, photo:'', video:'' } : null;
-  }).filter(Boolean);
-}
-
-// ── Fill lang tabs when editing a recipe ──
-function fillMlangTabs(r) {
-  ['en','ru','vi'].forEach(l => {
-    // Clear
-    const ingC = document.getElementById(`f-ingredients-${l}`);
-    if (ingC) ingC.innerHTML = '';
-    const stepC = document.getElementById(`f-steps-${l}`);
-    if (stepC) stepC.innerHTML = '';
-    _mlangIngCount[l] = 0;
-    _mlangStepCount[l] = 0;
-
-    // Fill ingredients
-    const ings = r.ingredientsI18n?.[l] || [];
-    if (ings.length) {
-      ings.forEach(ing => addMlangIngRow(l, ing));
-    } else {
-      // Prefill with main ingredients names (untranslated), same amounts
-      (r.ingredients||[]).forEach(ing => addMlangIngRow(l, ing));
-    }
-    // Fill steps
-    const steps = r.stepsI18n?.[l] || [];
-    if (steps.length) {
-      steps.forEach(s => addMlangStepRow(l, s));
-    } else {
-      (r.steps||[]).forEach(s => addMlangStepRow(l, s));
-    }
-    // Notes already handled by visible textarea (f-notes-en/ru/vi)
-    const notesEl = document.getElementById(`f-notes-${l}`);
-    if (notesEl) notesEl.value = r.notesI18n?.[l] || r.notes || '';
-  });
-}
-
-// ── Clear lang tabs ──
-function clearMlangTabs() {
-  ['en','ru','vi'].forEach(l => {
-    const ingC = document.getElementById(`f-ingredients-${l}`);
-    if (ingC) ingC.innerHTML = '';
-    const stepC = document.getElementById(`f-steps-${l}`);
-    if (stepC) stepC.innerHTML = '';
-    _mlangIngCount[l] = 0;
-    _mlangStepCount[l] = 0;
-    const notesEl = document.getElementById(`f-notes-${l}`);
-    if (notesEl) notesEl.value = '';
-    // Seed one empty row
-    addMlangIngRow(l);
-    addMlangStepRow(l);
-  });
-  switchMlangTab('main');
-}
-
-// ── Auto-translate: also fill lang tabs via Claude API ──
-// We hook into the existing autoTranslateForm() after it runs:
-const _origAutoTranslate = window.autoTranslateForm;
-
-// Override to also translate ings/steps if API is used
-// The existing function stores results in hidden inputs for name/desc/story.
-// We extend it to also populate lang tab ings/steps/notes from main tab.
-window._afterTranslateFillTabs = function(result) {
-  // result: { en:{ings,steps,notes}, ru:{...}, vi:{...} }
-  ['en','ru','vi'].forEach(l => {
-    const data = result?.[l];
-    if (!data) return;
-    // Ings
-    const ingC = document.getElementById(`f-ingredients-${l}`);
-    if (ingC && data.ings?.length) {
-      ingC.innerHTML = '';
-      _mlangIngCount[l] = 0;
-      data.ings.forEach(ing => addMlangIngRow(l, ing));
-    }
-    // Steps
-    const stepC = document.getElementById(`f-steps-${l}`);
-    if (stepC && data.steps?.length) {
-      stepC.innerHTML = '';
-      _mlangStepCount[l] = 0;
-      data.steps.forEach(s => addMlangStepRow(l, s));
-    }
-    // Notes
-    const notesEl = document.getElementById(`f-notes-${l}`);
-    if (notesEl && data.notes) notesEl.value = data.notes;
-  });
 };
 
 function renderReportChart(id, data, color, threshold) {
