@@ -1002,6 +1002,33 @@
   }
   .timer-preset-btn:hover { border-color: var(--warm); color: var(--warm); background: var(--warm-pale); }
 
+
+  /* ── MULTILANG TABS ── */
+  .mlang-tab-bar {
+    display: flex; gap: 0; margin-bottom: 0;
+    border-bottom: 2px solid var(--border-soft); flex-wrap: wrap;
+  }
+  .mlang-tab {
+    padding: 8px 14px; border: none; border-bottom: 2px solid transparent;
+    margin-bottom: -2px; cursor: pointer; font-size: 13px; font-weight: 600;
+    font-family: var(--font-body); color: var(--text-muted);
+    background: transparent; transition: all .18s;
+    border-radius: var(--radius-xs) var(--radius-xs) 0 0;
+  }
+  .mlang-tab.active { color: var(--warm-dark); border-bottom-color: var(--warm); background: var(--warm-pale); }
+  .mlang-tab:hover:not(.active) { color: var(--text); background: var(--beige-deep); }
+  .mlang-tab-panel { display: none; }
+  .mlang-tab-panel.active { display: block; }
+  .mlang-tab-content {
+    border: 1px solid var(--border-soft); border-top: none;
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    padding: 16px; background: var(--cream); margin-bottom: 20px;
+  }
+  .mlang-copy-hint {
+    font-size: 11px; color: var(--text-light); font-style: italic;
+    margin-bottom: 12px; padding: 6px 10px; background: var(--beige);
+    border-radius: var(--radius-xs); border-left: 3px solid var(--warm-light);
+  }
 </style>
 </head>
 <body>
@@ -1754,7 +1781,7 @@
     <input type="hidden" id="f-name-ru"/> <input type="hidden" id="f-name-vi"/> <input type="hidden" id="f-name-en"/>
     <input type="hidden" id="f-desc-ru"/> <input type="hidden" id="f-desc-vi"/> <input type="hidden" id="f-desc-en"/>
     <input type="hidden" id="f-story-ru"/> <input type="hidden" id="f-story-vi"/> <input type="hidden" id="f-story-en"/>
-    <input type="hidden" id="f-notes-ru"/> <input type="hidden" id="f-notes-vi"/> <input type="hidden" id="f-notes-en"/>
+    <!-- f-notes-ru/en/vi are now real textareas in lang tabs -->
 
     <div class="grid-3 mb16">
       <div><label data-i="recipe.servings">Порции / Servings</label><input type="number" id="f-servings" value="2" min="1"/></div>
@@ -1813,25 +1840,87 @@
       </div>
     </div>
 
-    <!-- Ingredients -->
-    <div class="mb20">
-      <div class="section-title" data-i="recipe.ingredients">Ingredients</div>
-      <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px">💡 КБЖУ рассчитывается автоматически при добавлении ингредиентов</p>
-      <div id="f-ingredients"></div>
-      <button class="btn btn-secondary btn-sm" onclick="addIngredientRow()">+ <span data-i="recipe.addIngredient">Add Ingredient</span></button>
-    </div>
+    <!-- Ingredients / Steps / Notes — 4 lang tabs -->
+    <div>
+      <div class="mlang-tab-bar">
+        <button class="mlang-tab active" onclick="switchMlangTab('main')" id="mlang-tab-main">🍽 Основной</button>
+        <button class="mlang-tab" onclick="switchMlangTab('en')"  id="mlang-tab-en">🇬🇧 English</button>
+        <button class="mlang-tab" onclick="switchMlangTab('ru')"  id="mlang-tab-ru">🇷🇺 Русский</button>
+        <button class="mlang-tab" onclick="switchMlangTab('vi')"  id="mlang-tab-vi">🇻🇳 Tiếng Việt</button>
+      </div>
+      <div class="mlang-tab-content">
 
-    <!-- Steps -->
-    <div class="mb20">
-      <div class="section-title" data-i="recipe.steps">Steps</div>
-      <div id="f-steps"></div>
-      <button class="btn btn-secondary btn-sm" onclick="addStepRow()">+ Add Step</button>
-    </div>
+        <!-- MAIN -->
+        <div class="mlang-tab-panel active" id="mlang-panel-main">
+          <div class="mb20">
+            <div class="section-title" data-i="recipe.ingredients">Ingredients</div>
+            <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px">💡 КБЖУ рассчитывается автоматически при добавлении ингредиентов</p>
+            <div id="f-ingredients"></div>
+            <button class="btn btn-secondary btn-sm" onclick="addIngredientRow()">+ <span data-i="recipe.addIngredient">Add Ingredient</span></button>
+          </div>
+          <div class="mb20">
+            <div class="section-title" data-i="recipe.steps">Steps</div>
+            <div id="f-steps"></div>
+            <button class="btn btn-secondary btn-sm" onclick="addStepRow()">+ Add Step</button>
+          </div>
+          <div>
+            <label data-i="recipe.notes">Notes</label>
+            <textarea id="f-notes" rows="2" style="width:100%;box-sizing:border-box"></textarea>
+          </div>
+        </div>
 
-    <!-- Notes -->
-    <div class="mb24">
-      <label data-i="recipe.notes">Notes</label>
-      <textarea id="f-notes" rows="2"></textarea>
+        <!-- ENGLISH -->
+        <div class="mlang-tab-panel" id="mlang-panel-en">
+          <div class="mlang-copy-hint">🌐 English translation. Use 🌐 "Translate all" to auto-fill, or type manually.</div>
+          <div class="mb20">
+            <div class="section-title">🥕 Ingredients <span style="font-size:11px;color:var(--text-muted);font-weight:400">(English)</span></div>
+            <div id="f-ingredients-en"></div>
+            <button class="btn btn-secondary btn-sm" onclick="addMlangIngRow('en')">+ Add Ingredient (EN)</button>
+          </div>
+          <div class="mb20">
+            <div class="section-title">📋 Steps <span style="font-size:11px;color:var(--text-muted);font-weight:400">(English)</span></div>
+            <div id="f-steps-en"></div>
+            <button class="btn btn-secondary btn-sm" onclick="addMlangStepRow('en')">+ Add Step (EN)</button>
+          </div>
+          <div><label>Notes (English)</label>
+            <textarea id="f-notes-en" rows="2" style="width:100%;box-sizing:border-box"></textarea></div>
+        </div>
+
+        <!-- RUSSIAN -->
+        <div class="mlang-tab-panel" id="mlang-panel-ru">
+          <div class="mlang-copy-hint">🌐 Перевод на русский. Используй 🌐 "Перевести" или заполни вручную.</div>
+          <div class="mb20">
+            <div class="section-title">🥕 Ингредиенты <span style="font-size:11px;color:var(--text-muted);font-weight:400">(Русский)</span></div>
+            <div id="f-ingredients-ru"></div>
+            <button class="btn btn-secondary btn-sm" onclick="addMlangIngRow('ru')">+ Добавить (RU)</button>
+          </div>
+          <div class="mb20">
+            <div class="section-title">📋 Шаги <span style="font-size:11px;color:var(--text-muted);font-weight:400">(Русский)</span></div>
+            <div id="f-steps-ru"></div>
+            <button class="btn btn-secondary btn-sm" onclick="addMlangStepRow('ru')">+ Добавить шаг (RU)</button>
+          </div>
+          <div><label>Заметки (Русский)</label>
+            <textarea id="f-notes-ru" rows="2" style="width:100%;box-sizing:border-box"></textarea></div>
+        </div>
+
+        <!-- VIETNAMESE -->
+        <div class="mlang-tab-panel" id="mlang-panel-vi">
+          <div class="mlang-copy-hint">🌐 Bản dịch tiếng Việt. Dùng 🌐 "Dịch tất cả" hoặc nhập tay.</div>
+          <div class="mb20">
+            <div class="section-title">🥕 Nguyên liệu <span style="font-size:11px;color:var(--text-muted);font-weight:400">(Tiếng Việt)</span></div>
+            <div id="f-ingredients-vi"></div>
+            <button class="btn btn-secondary btn-sm" onclick="addMlangIngRow('vi')">+ Thêm nguyên liệu (VI)</button>
+          </div>
+          <div class="mb20">
+            <div class="section-title">📋 Các bước <span style="font-size:11px;color:var(--text-muted);font-weight:400">(Tiếng Việt)</span></div>
+            <div id="f-steps-vi"></div>
+            <button class="btn btn-secondary btn-sm" onclick="addMlangStepRow('vi')">+ Thêm bước (VI)</button>
+          </div>
+          <div><label>Ghi chú (Tiếng Việt)</label>
+            <textarea id="f-notes-vi" rows="2" style="width:100%;box-sizing:border-box"></textarea></div>
+        </div>
+
+      </div>
     </div>
 
     <input type="hidden" id="f-id"/>
@@ -2008,15 +2097,8 @@ window.applyFirestoreData = () => {
   if (window._categories?.length) categories = window._categories;
   // Journal sync
   if (window._journal?.length)   journalNotes = window._journal;
-  // Water data
-  if (window._waterLogs !== undefined) {
-    waterLogs = window._waterLogs;
-    localStorage.setItem('waterLogs', JSON.stringify(waterLogs));
-  }
-  if (window._waterGoal !== undefined) {
-    waterGoal = window._waterGoal;
-    localStorage.setItem('waterGoal', String(waterGoal));
-  }
+  if (window._waterLogs !== undefined) { waterLogs = window._waterLogs; localStorage.setItem('waterLogs', JSON.stringify(waterLogs)); }
+  if (window._waterGoal !== undefined) { waterGoal = window._waterGoal; localStorage.setItem('waterGoal', String(waterGoal)); }
   renderCategoryPills();
   renderCountryPills();
   renderRecipes();
@@ -2528,6 +2610,8 @@ function clearForm() {
   document.getElementById('kbju-auto-badge').classList.add('hidden');
   addIngredientRow();
   addStepRow();
+  if (typeof clearMlangTabs === 'function') clearMlangTabs();
+  switchMlangTab('main');
 }
 
 function fillForm(r) {
@@ -2572,6 +2656,7 @@ function fillForm(r) {
   // Steps
   document.getElementById('f-steps').innerHTML = '';
   (r.steps||[]).forEach(s => addStepRow(s));
+  if (typeof fillMlangTabs === 'function') fillMlangTabs(r);
   // check if was auto-translated
   if (r.nameI18n?.ru && r.nameI18n?.en && r.nameI18n?.vi) {
     document.getElementById('kbju-auto-badge').classList.remove('hidden');
@@ -2819,10 +2904,16 @@ function saveRecipeForm(mode = 'publish', silent = false) {
     vi: document.getElementById('f-story-vi').value || document.getElementById('f-story').value,
   };
   const notesI18n = {
-    ru: document.getElementById('f-notes-ru').value || document.getElementById('f-notes').value,
-    en: document.getElementById('f-notes-en').value || document.getElementById('f-notes').value,
-    vi: document.getElementById('f-notes-vi').value || document.getElementById('f-notes').value,
+    ru: (document.getElementById('f-notes-ru')?.value) || document.getElementById('f-notes').value,
+    en: (document.getElementById('f-notes-en')?.value) || document.getElementById('f-notes').value,
+    vi: (document.getElementById('f-notes-vi')?.value) || document.getElementById('f-notes').value,
   };
+  const ingredientsI18n = (typeof collectMlangIngs === 'function') ? {
+    en: collectMlangIngs('en'), ru: collectMlangIngs('ru'), vi: collectMlangIngs('vi'),
+  } : {};
+  const stepsI18n = (typeof collectMlangSteps === 'function') ? {
+    en: collectMlangSteps('en'), ru: collectMlangSteps('ru'), vi: collectMlangSteps('vi'),
+  } : {};
 
   const cookingHours = parseInt(document.getElementById('f-hours').value) || 0;
   const cookingMinutes = parseInt(document.getElementById('f-minutes').value) || 0;
@@ -2855,7 +2946,9 @@ function saveRecipeForm(mode = 'publish', silent = false) {
       carbs: parseInt(document.getElementById('f-carbs').value) || 0,
     },
     ingredients,
+    ingredientsI18n,
     steps,
+    stepsI18n,
     substitutes: existing?.substitutes || {},
     viewedAt: existing?.viewedAt || [],
     createdAt: existing?.createdAt || new Date().toISOString(),
@@ -3473,8 +3566,15 @@ async function autoTranslateForm() {
   const desc = document.getElementById('f-description').value.trim();
   const story = document.getElementById('f-story').value.trim();
   const notes = document.getElementById('f-notes').value.trim();
-
   if (!name) { alert('Введите название рецепта перед переводом'); return; }
+
+  const mainIngs = Array.from(document.querySelectorAll('#f-ingredients .ing-row-grid')).map(row => ({
+    name: row.querySelector('.ing-name-input')?.value || '',
+    amount: parseFloat(row.querySelector('.ing-amount-input')?.value) || 0,
+    unit: row.querySelector('.ing-unit-input')?.value || 'г',
+  })).filter(i => i.name);
+  const mainSteps = Array.from(document.querySelectorAll('#f-steps .step-row')).map(row =>
+    (row.querySelector('.step-text-input')?.value || '').trim()).filter(Boolean);
 
   const btn = document.getElementById('translate-btn');
   const statusEl = document.getElementById('translate-status');
@@ -3482,50 +3582,50 @@ async function autoTranslateForm() {
   btn.innerHTML = '<span class="translate-spinner">⏳</span> Переводим...';
   statusEl.textContent = '';
 
-  const prompt = `Переведи следующие поля рецепта на русский (ru), английский (en) и вьетнамский (vi).
+  const prompt = `Переведи поля рецепта на русский (ru), английский (en) и вьетнамский (vi).
 Ответь ТОЛЬКО валидным JSON без markdown, без пояснений.
-
-Поля:
-- name: "${name}"
-- description: "${desc}"
-- story: "${story}"
-- notes: "${notes}"
-
-Формат ответа:
-{"name":{"ru":"...","en":"...","vi":"..."},"description":{"ru":"...","en":"...","vi":"..."},"story":{"ru":"...","en":"...","vi":"..."},"notes":{"ru":"...","en":"...","vi":"..."}}`;
+Поля: name:"${name}", description:"${desc}", story:"${story}", notes:"${notes}"
+Ингредиенты: ${JSON.stringify(mainIngs.map(i=>i.name))}
+Шаги: ${JSON.stringify(mainSteps)}
+Формат: {"name":{"ru":"...","en":"...","vi":"..."},"description":{"ru":"...","en":"...","vi":"..."},"story":{"ru":"...","en":"...","vi":"..."},"notes":{"ru":"...","en":"...","vi":"..."},"ingredients":{"ru":["..."],"en":["..."],"vi":["..."]},"steps":{"ru":["..."],"en":["..."],"vi":["..."]}}`;
 
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }]
-      })
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 2000,
+        messages: [{ role: 'user', content: prompt }] })
     });
     const data = await resp.json();
-    const text = data.content?.map(b => b.text||'').join('').trim();
-    const clean = text.replace(/```json|```/g,'').trim();
-    const parsed = JSON.parse(clean);
+    const parsed = JSON.parse(data.content?.map(b=>b.text||'').join('').trim().replace(/```json|```/g,'').trim());
 
-    // Fill hidden fields
     ['ru','vi','en'].forEach(l => {
-      const n = document.getElementById('f-name-'+l); if(n) n.value = parsed.name?.[l]||name;
-      const d = document.getElementById('f-desc-'+l); if(d) d.value = parsed.description?.[l]||desc;
-      const s = document.getElementById('f-story-'+l); if(s) s.value = parsed.story?.[l]||story;
-      const nt= document.getElementById('f-notes-'+l); if(nt) nt.value = parsed.notes?.[l]||notes;
+      const n=document.getElementById('f-name-'+l); if(n) n.value=parsed.name?.[l]||name;
+      const d=document.getElementById('f-desc-'+l); if(d) d.value=parsed.description?.[l]||desc;
+      const s=document.getElementById('f-story-'+l); if(s) s.value=parsed.story?.[l]||story;
+      const nt=document.getElementById('f-notes-'+l); if(nt) nt.value=parsed.notes?.[l]||notes;
     });
-
-    statusEl.textContent = `✅ Переведено: RU / EN / VI`;
-    statusEl.style.color = 'var(--success)';
+    ['ru','en','vi'].forEach(l => {
+      const names=parsed.ingredients?.[l]||[];
+      const cont=document.getElementById('f-ingredients-'+l);
+      if(cont){cont.innerHTML='';_mlangIngCount[l]=0;
+        mainIngs.forEach((ing,i)=>addMlangIngRow(l,{name:names[i]||ing.name,amount:ing.amount,unit:ing.unit}));
+        if(!mainIngs.length) addMlangIngRow(l);}
+      const stepsTr=parsed.steps?.[l]||[];
+      const sc=document.getElementById('f-steps-'+l);
+      if(sc){sc.innerHTML='';_mlangStepCount[l]=0;
+        stepsTr.forEach(s=>addMlangStepRow(l,s));
+        if(!stepsTr.length) addMlangStepRow(l);}
+    });
+    statusEl.textContent='✅ Переведено: ингредиенты, шаги, описание — RU / EN / VI';
+    statusEl.style.color='var(--success)';
     document.getElementById('kbju-auto-badge').classList.remove('hidden');
   } catch(e) {
-    statusEl.textContent = '❌ Ошибка перевода: ' + e.message;
-    statusEl.style.color = 'var(--danger)';
+    statusEl.textContent='❌ Ошибка перевода: '+e.message;
+    statusEl.style.color='var(--danger)';
   } finally {
-    btn.disabled = false;
-    btn.innerHTML = '🌐 <span>Перевести на все языки</span>';
+    btn.disabled=false;
+    btn.innerHTML='🌐 <span>Перевести на все языки</span>';
   }
 }
 
@@ -3753,12 +3853,9 @@ let waterGoal = parseInt(localStorage.getItem('waterGoal') || '2000');
 function saveWaterData() {
   localStorage.setItem('waterLogs', JSON.stringify(waterLogs));
   localStorage.setItem('waterGoal', String(waterGoal));
-  // Sync to Firestore
   window._waterLogs = waterLogs;
   window._waterGoal = waterGoal;
-  if (typeof window.firestoreSave === 'function') {
-    window.firestoreSave();
-  }
+  if (typeof window.firestoreSave === 'function') window.firestoreSave();
 }
 
 function getTodayStr() { return new Date().toISOString().slice(0,10); }
@@ -5176,6 +5273,82 @@ window.closeModal = function(id) {
   }
   if (typeof _origCloseModal === 'function') _origCloseModal(id);
 };
+
+// ─── MULTILANG TABS JS ───────────────────────────────────────────────────────
+
+function switchMlangTab(tab) {
+  ['main','en','ru','vi'].forEach(t => {
+    document.getElementById('mlang-tab-'+t)?.classList.toggle('active', t===tab);
+    document.getElementById('mlang-panel-'+t)?.classList.toggle('active', t===tab);
+  });
+}
+
+let _mlangIngCount = {en:0,ru:0,vi:0};
+let _mlangStepCount = {en:0,ru:0,vi:0};
+
+function addMlangIngRow(l, ing=null) {
+  _mlangIngCount[l]=(_mlangIngCount[l]||0)+1;
+  const id='mlang-ing-'+l+'-'+_mlangIngCount[l];
+  const cont=document.getElementById('f-ingredients-'+l); if(!cont) return;
+  const row=document.createElement('div'); row.className='ing-row-grid'; row.id=id;
+  const unitOpts=UNITS.map(u=>'<option value="'+u+'"'+((ing?.unit||'г')===u?' selected':'')+'>'+u+'</option>').join('');
+  row.innerHTML='<input type="text" placeholder="Ingredient" value="'+(ing?.name||'')+'" class="mlang-ing-name"/>'+
+    '<input type="number" placeholder="0" value="'+(ing?.amount||'')+'" class="mlang-ing-amount" min="0"/>'+
+    '<select class="mlang-ing-unit">'+unitOpts+'</select>'+
+    '<button class="btn btn-danger btn-icon" onclick="document.getElementById(''+id+'').remove()">✕</button>';
+  cont.appendChild(row);
+}
+
+function addMlangStepRow(l, text='') {
+  _mlangStepCount[l]=(_mlangStepCount[l]||0)+1;
+  const sid='mlang-step-'+l+'-'+_mlangStepCount[l];
+  const cont=document.getElementById('f-steps-'+l); if(!cont) return;
+  const idx=cont.children.length+1;
+  const t=(typeof text==='string')?text:(text?.text||'');
+  const row=document.createElement('div'); row.className='step-row'; row.id=sid;
+  row.innerHTML='<div class="step-row-header">'+
+    '<div class="step-num">'+idx+'</div>'+
+    '<input type="text" class="step-text-input mlang-step-text" value="'+t.replace(/"/g,'&quot;')+'" placeholder="Step '+idx+'" style="flex:1"/>'+
+    '<button class="btn btn-danger btn-icon" style="flex-shrink:0" onclick="this.closest('.step-row').remove()">✕</button>'+
+    '</div>';
+  cont.appendChild(row);
+}
+
+function collectMlangIngs(l) {
+  return Array.from(document.querySelectorAll('#f-ingredients-'+l+' .ing-row-grid')).map((row,i)=>({
+    id:'i'+(i+1), name:row.querySelector('.mlang-ing-name')?.value||'',
+    amount:parseFloat(row.querySelector('.mlang-ing-amount')?.value)||0,
+    unit:row.querySelector('.mlang-ing-unit')?.value||'г',
+  })).filter(x=>x.name);
+}
+
+function collectMlangSteps(l) {
+  return Array.from(document.querySelectorAll('#f-steps-'+l+' .step-row')).map(row=>{
+    const t=(row.querySelector('.step-text-input')?.value||'').trim();
+    return t?{text:t,photo:'',video:''}:null;
+  }).filter(Boolean);
+}
+
+function fillMlangTabs(r) {
+  ['en','ru','vi'].forEach(l=>{
+    const ingC=document.getElementById('f-ingredients-'+l); if(ingC) ingC.innerHTML='';
+    const stepC=document.getElementById('f-steps-'+l); if(stepC) stepC.innerHTML='';
+    _mlangIngCount[l]=0; _mlangStepCount[l]=0;
+    (r.ingredientsI18n?.[l]?.length?r.ingredientsI18n[l]:(r.ingredients||[])).forEach(ing=>addMlangIngRow(l,ing));
+    (r.stepsI18n?.[l]?.length?r.stepsI18n[l]:(r.steps||[])).forEach(s=>addMlangStepRow(l,s));
+    const nt=document.getElementById('f-notes-'+l); if(nt) nt.value=r.notesI18n?.[l]||r.notes||'';
+  });
+}
+
+function clearMlangTabs() {
+  ['en','ru','vi'].forEach(l=>{
+    const ingC=document.getElementById('f-ingredients-'+l); if(ingC) ingC.innerHTML='';
+    const stepC=document.getElementById('f-steps-'+l); if(stepC) stepC.innerHTML='';
+    _mlangIngCount[l]=0; _mlangStepCount[l]=0;
+    const nt=document.getElementById('f-notes-'+l); if(nt) nt.value='';
+    addMlangIngRow(l); addMlangStepRow(l);
+  });
+}
 
 function renderReportChart(id, data, color, threshold) {
   const el = document.getElementById(id);
