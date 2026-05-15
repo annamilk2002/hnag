@@ -36,8 +36,21 @@
       const user = auth.currentUser;
       if (!user) return;
       try {
+        const recipesToSave = window._recipes || [];
+        // SAFETY: never overwrite Firestore recipes with an empty array if
+        // the user has recipes stored — load current count first
+        if (recipesToSave.length === 0) {
+          const snap = await getDoc(doc(db, 'users', user.uid));
+          if (snap.exists()) {
+            const existing = JSON.parse(snap.data().recipes || '[]');
+            if (existing.length > 0) {
+              console.warn('[SAVE GUARD] Prevented overwrite: in-memory recipes=0 but Firestore has', existing.length, 'recipes. Aborting save.');
+              return;
+            }
+          }
+        }
         await setDoc(doc(db, 'users', user.uid), {
-          recipes:    JSON.stringify(window._recipes    || []),
+          recipes:    JSON.stringify(recipesToSave),
           mealPlan:   JSON.stringify(window._mealPlan   || []),
           profile:    JSON.stringify(window._profile    || {}),
           countries:  JSON.stringify(window._countries  || []),
@@ -46,6 +59,7 @@
           waterLogs:  JSON.stringify(window._waterLogs  || []),
           waterGoal:  String(window._waterGoal          || 2000),
         });
+        console.log('[SAVE] Saved', recipesToSave.length, 'recipes to Firestore');
       } catch(e) { console.error('Firestore save error:', e); }
     };
 
@@ -1029,6 +1043,39 @@
     margin-bottom: 12px; padding: 6px 10px; background: var(--beige);
     border-radius: var(--radius-xs); border-left: 3px solid var(--warm-light);
   }
+
+  /* ── BACKUP / RESTORE ── */
+  .backup-modal-overlay {
+    position: fixed; inset: 0; z-index: 2000;
+    background: rgba(46,33,24,0.6); backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  .backup-modal-box {
+    background: var(--cream); border-radius: var(--radius);
+    padding: 28px; max-width: 520px; width: 100%;
+    box-shadow: var(--shadow-lg); animation: fadeUp .25s ease;
+  }
+  .backup-modal-title {
+    font-family: var(--font-display); font-size: 22px; font-style: italic;
+    color: var(--warm-dark); margin-bottom: 6px;
+  }
+  .backup-modal-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+  .backup-section { background: var(--beige); border-radius: var(--radius-sm);
+    padding: 14px 16px; margin-bottom: 14px; }
+  .backup-section-title { font-size: 12px; font-weight: 700; color: var(--text-muted);
+    letter-spacing: .5px; text-transform: uppercase; margin-bottom: 10px; }
+  .backup-btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .backup-action-btn {
+    padding: 9px 18px; border-radius: var(--radius-sm); border: 1.5px solid var(--border);
+    font-size: 13px; font-weight: 600; font-family: var(--font-body);
+    cursor: pointer; transition: all .18s; display: flex; align-items: center; gap: 6px;
+    background: var(--cream); color: var(--text);
+  }
+  .backup-action-btn:hover { border-color: var(--warm); color: var(--warm-dark); background: var(--warm-pale); }
+  .backup-action-btn.primary { background: var(--warm); color: #fff; border-color: var(--warm); }
+  .backup-action-btn.primary:hover { background: var(--warm-hover); }
+  .backup-action-btn.danger { background: #FDE8E8; color: #C0504D; border-color: #f5c6c6; }
+  .backup-status { font-size: 12px; margin-top: 10px; min-height: 18px; }
 </style>
 </head>
 <body>
@@ -1066,8 +1113,45 @@
   </div>
 </header>
 <!-- Sync status bar -->
-<div id="sync-bar" style="text-align:center;padding:4px 0;font-size:12px;background:var(--beige-deep);border-bottom:1px solid var(--border);">
+<div id="sync-bar" style="display:flex;align-items:center;justify-content:center;gap:12px;padding:4px 12px;font-size:12px;background:var(--beige-deep);border-bottom:1px solid var(--border);">
   <span id="sync-status" style="color:var(--text-muted);">🔒 Chưa đăng nhập</span>
+  <button onclick="openBackupModal()" style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px;border:1px solid var(--border);background:var(--cream);color:var(--text-muted);cursor:pointer;font-family:var(--font-body);">💾 Бэкап</button>
+</div>
+
+<!-- BACKUP / RESTORE MODAL -->
+<div id="backup-modal" class="backup-modal-overlay" style="display:none" onclick="if(event.target===this)closeBackupModal()">
+  <div class="backup-modal-box">
+    <div class="backup-modal-title">💾 Резервная копия</div>
+    <div class="backup-modal-sub">Экспортируй данные в файл или восстанови из файла / JSON-строки</div>
+
+    <div class="backup-section">
+      <div class="backup-section-title">📤 Экспорт</div>
+      <div class="backup-btn-row">
+        <button class="backup-action-btn primary" onclick="exportBackup()">⬇️ Скачать JSON-файл</button>
+        <button class="backup-action-btn" onclick="copyBackupToClipboard()">📋 Копировать JSON</button>
+      </div>
+      <div class="backup-status" id="export-status"></div>
+    </div>
+
+    <div class="backup-section">
+      <div class="backup-section-title">📥 Импорт / Восстановление</div>
+      <div class="backup-btn-row">
+        <label class="backup-action-btn" style="cursor:pointer">
+          📂 Загрузить JSON-файл
+          <input type="file" accept=".json" id="backup-file-input" style="display:none" onchange="importBackupFile(event)"/>
+        </label>
+      </div>
+      <div style="margin-top:10px">
+        <textarea id="backup-paste-area" rows="4" style="width:100%;box-sizing:border-box;font-size:11px;font-family:monospace;border-radius:var(--radius-xs);border:1.5px solid var(--border);padding:8px;background:var(--beige);resize:vertical" placeholder="Или вставь JSON сюда..."></textarea>
+        <button class="backup-action-btn primary" style="margin-top:8px" onclick="importBackupFromText()">✅ Восстановить из текста</button>
+      </div>
+      <div class="backup-status" id="import-status"></div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;margin-top:4px">
+      <button class="backup-action-btn" onclick="closeBackupModal()">Закрыть</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── MAIN ── -->
@@ -5348,6 +5432,97 @@ function clearMlangTabs() {
     const nt=document.getElementById('f-notes-'+l); if(nt) nt.value='';
     addMlangIngRow(l); addMlangStepRow(l);
   });
+}
+
+// ─── BACKUP / RESTORE ────────────────────────────────────────────────────────
+
+function openBackupModal() {
+  document.getElementById('backup-modal').style.display = '';
+  document.getElementById('export-status').textContent = '';
+  document.getElementById('import-status').textContent = '';
+  document.getElementById('backup-paste-area').value = '';
+}
+function closeBackupModal() {
+  document.getElementById('backup-modal').style.display = 'none';
+}
+
+function _buildBackupData() {
+  return {
+    _version: 2,
+    _exportedAt: new Date().toISOString(),
+    recipes,
+    mealPlan,
+    profile,
+    countries,
+    categories,
+    journal: journalNotes || [],
+    waterLogs,
+    waterGoal,
+  };
+}
+
+function exportBackup() {
+  const data = _buildBackupData();
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'recipes_backup_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  document.getElementById('export-status').innerHTML = '<span style="color:var(--success)">✅ Файл скачан!</span>';
+}
+
+function copyBackupToClipboard() {
+  const text = JSON.stringify(_buildBackupData(), null, 2);
+  navigator.clipboard.writeText(text).then(() => {
+    document.getElementById('export-status').innerHTML = '<span style="color:var(--success)">✅ Скопировано в буфер обмена!</span>';
+  }).catch(() => {
+    document.getElementById('backup-paste-area').value = text;
+    document.getElementById('export-status').innerHTML = '<span style="color:var(--text-muted)">Автокопирование не сработало — JSON вставлен в поле ниже</span>';
+  });
+}
+
+function importBackupFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('backup-paste-area').value = ev.target.result;
+    importBackupFromText();
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function importBackupFromText() {
+  const statusEl = document.getElementById('import-status');
+  try {
+    const raw = document.getElementById('backup-paste-area').value.trim();
+    if (!raw) { statusEl.innerHTML = '<span style="color:#C0504D">⚠️ Пусто — вставь JSON</span>'; return; }
+    const data = JSON.parse(raw);
+
+    if (data.recipes?.length) {
+      recipes = data.recipes;
+      window._recipes = recipes;
+    }
+    if (data.mealPlan) { mealPlan = data.mealPlan; window._mealPlan = mealPlan; }
+    if (data.profile?.name) { profile = data.profile; window._profile = profile; }
+    if (data.countries?.length) { countries = data.countries; window._countries = countries; }
+    if (data.categories?.length) { categories = data.categories; window._categories = categories; }
+    if (data.journal?.length) { journalNotes = data.journal; window._journal = journalNotes; }
+    if (data.waterLogs) { waterLogs = data.waterLogs; window._waterLogs = waterLogs; localStorage.setItem('waterLogs', JSON.stringify(waterLogs)); }
+    if (data.waterGoal) { waterGoal = data.waterGoal; window._waterGoal = waterGoal; localStorage.setItem('waterGoal', String(waterGoal)); }
+
+    renderCategoryPills();
+    renderCountryPills();
+    renderRecipes();
+    save();
+
+    statusEl.innerHTML = '<span style="color:var(--success)">✅ Восстановлено ' + (data.recipes?.length||0) + ' рецептов! Данные сохранены в Firestore.</span>';
+  } catch(e) {
+    statusEl.innerHTML = '<span style="color:#C0504D">❌ Ошибка: ' + e.message + '</span>';
+  }
 }
 
 function renderReportChart(id, data, color, threshold) {
