@@ -36,30 +36,14 @@
       const user = auth.currentUser;
       if (!user) return;
       try {
-        const recipesToSave = window._recipes || [];
-        // SAFETY: never overwrite Firestore recipes with an empty array if
-        // the user has recipes stored — load current count first
-        if (recipesToSave.length === 0) {
-          const snap = await getDoc(doc(db, 'users', user.uid));
-          if (snap.exists()) {
-            const existing = JSON.parse(snap.data().recipes || '[]');
-            if (existing.length > 0) {
-              console.warn('[SAVE GUARD] Prevented overwrite: in-memory recipes=0 but Firestore has', existing.length, 'recipes. Aborting save.');
-              return;
-            }
-          }
-        }
         await setDoc(doc(db, 'users', user.uid), {
-          recipes:    JSON.stringify(recipesToSave),
+          recipes:    JSON.stringify(window._recipes    || []),
           mealPlan:   JSON.stringify(window._mealPlan   || []),
           profile:    JSON.stringify(window._profile    || {}),
           countries:  JSON.stringify(window._countries  || []),
           categories: JSON.stringify(window._categories || []),
           journal:    JSON.stringify(window._journal    || []),
-          waterLogs:  JSON.stringify(window._waterLogs  || []),
-          waterGoal:  String(window._waterGoal          || 2000),
         });
-        console.log('[SAVE] Saved', recipesToSave.length, 'recipes to Firestore');
       } catch(e) { console.error('Firestore save error:', e); }
     };
 
@@ -75,8 +59,6 @@
             countries:  JSON.parse(d.countries  || '[]'),
             categories: JSON.parse(d.categories || '[]'),
             journal:    JSON.parse(d.journal    || '[]'),
-            waterLogs:  JSON.parse(d.waterLogs  || '[]'),
-            waterGoal:  parseInt(d.waterGoal    || '2000'),
           };
         }
       } catch(e) { console.error('Firestore load error:', e); }
@@ -1016,66 +998,6 @@
   }
   .timer-preset-btn:hover { border-color: var(--warm); color: var(--warm); background: var(--warm-pale); }
 
-
-  /* ── MULTILANG TABS ── */
-  .mlang-tab-bar {
-    display: flex; gap: 0; margin-bottom: 0;
-    border-bottom: 2px solid var(--border-soft); flex-wrap: wrap;
-  }
-  .mlang-tab {
-    padding: 8px 14px; border: none; border-bottom: 2px solid transparent;
-    margin-bottom: -2px; cursor: pointer; font-size: 13px; font-weight: 600;
-    font-family: var(--font-body); color: var(--text-muted);
-    background: transparent; transition: all .18s;
-    border-radius: var(--radius-xs) var(--radius-xs) 0 0;
-  }
-  .mlang-tab.active { color: var(--warm-dark); border-bottom-color: var(--warm); background: var(--warm-pale); }
-  .mlang-tab:hover:not(.active) { color: var(--text); background: var(--beige-deep); }
-  .mlang-tab-panel { display: none; }
-  .mlang-tab-panel.active { display: block; }
-  .mlang-tab-content {
-    border: 1px solid var(--border-soft); border-top: none;
-    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-    padding: 16px; background: var(--cream); margin-bottom: 20px;
-  }
-  .mlang-copy-hint {
-    font-size: 11px; color: var(--text-light); font-style: italic;
-    margin-bottom: 12px; padding: 6px 10px; background: var(--beige);
-    border-radius: var(--radius-xs); border-left: 3px solid var(--warm-light);
-  }
-
-  /* ── BACKUP / RESTORE ── */
-  .backup-modal-overlay {
-    position: fixed; inset: 0; z-index: 2000;
-    background: rgba(46,33,24,0.6); backdrop-filter: blur(6px);
-    display: flex; align-items: center; justify-content: center; padding: 16px;
-  }
-  .backup-modal-box {
-    background: var(--cream); border-radius: var(--radius);
-    padding: 28px; max-width: 520px; width: 100%;
-    box-shadow: var(--shadow-lg); animation: fadeUp .25s ease;
-  }
-  .backup-modal-title {
-    font-family: var(--font-display); font-size: 22px; font-style: italic;
-    color: var(--warm-dark); margin-bottom: 6px;
-  }
-  .backup-modal-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
-  .backup-section { background: var(--beige); border-radius: var(--radius-sm);
-    padding: 14px 16px; margin-bottom: 14px; }
-  .backup-section-title { font-size: 12px; font-weight: 700; color: var(--text-muted);
-    letter-spacing: .5px; text-transform: uppercase; margin-bottom: 10px; }
-  .backup-btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
-  .backup-action-btn {
-    padding: 9px 18px; border-radius: var(--radius-sm); border: 1.5px solid var(--border);
-    font-size: 13px; font-weight: 600; font-family: var(--font-body);
-    cursor: pointer; transition: all .18s; display: flex; align-items: center; gap: 6px;
-    background: var(--cream); color: var(--text);
-  }
-  .backup-action-btn:hover { border-color: var(--warm); color: var(--warm-dark); background: var(--warm-pale); }
-  .backup-action-btn.primary { background: var(--warm); color: #fff; border-color: var(--warm); }
-  .backup-action-btn.primary:hover { background: var(--warm-hover); }
-  .backup-action-btn.danger { background: #FDE8E8; color: #C0504D; border-color: #f5c6c6; }
-  .backup-status { font-size: 12px; margin-top: 10px; min-height: 18px; }
 </style>
 </head>
 <body>
@@ -1113,45 +1035,8 @@
   </div>
 </header>
 <!-- Sync status bar -->
-<div id="sync-bar" style="display:flex;align-items:center;justify-content:center;gap:12px;padding:4px 12px;font-size:12px;background:var(--beige-deep);border-bottom:1px solid var(--border);">
+<div id="sync-bar" style="text-align:center;padding:4px 0;font-size:12px;background:var(--beige-deep);border-bottom:1px solid var(--border);">
   <span id="sync-status" style="color:var(--text-muted);">🔒 Chưa đăng nhập</span>
-  <button onclick="openBackupModal()" style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px;border:1px solid var(--border);background:var(--cream);color:var(--text-muted);cursor:pointer;font-family:var(--font-body);">💾 Бэкап</button>
-</div>
-
-<!-- BACKUP / RESTORE MODAL -->
-<div id="backup-modal" class="backup-modal-overlay" style="display:none" onclick="if(event.target===this)closeBackupModal()">
-  <div class="backup-modal-box">
-    <div class="backup-modal-title">💾 Резервная копия</div>
-    <div class="backup-modal-sub">Экспортируй данные в файл или восстанови из файла / JSON-строки</div>
-
-    <div class="backup-section">
-      <div class="backup-section-title">📤 Экспорт</div>
-      <div class="backup-btn-row">
-        <button class="backup-action-btn primary" onclick="exportBackup()">⬇️ Скачать JSON-файл</button>
-        <button class="backup-action-btn" onclick="copyBackupToClipboard()">📋 Копировать JSON</button>
-      </div>
-      <div class="backup-status" id="export-status"></div>
-    </div>
-
-    <div class="backup-section">
-      <div class="backup-section-title">📥 Импорт / Восстановление</div>
-      <div class="backup-btn-row">
-        <label class="backup-action-btn" style="cursor:pointer">
-          📂 Загрузить JSON-файл
-          <input type="file" accept=".json" id="backup-file-input" style="display:none" onchange="importBackupFile(event)"/>
-        </label>
-      </div>
-      <div style="margin-top:10px">
-        <textarea id="backup-paste-area" rows="4" style="width:100%;box-sizing:border-box;font-size:11px;font-family:monospace;border-radius:var(--radius-xs);border:1.5px solid var(--border);padding:8px;background:var(--beige);resize:vertical" placeholder="Или вставь JSON сюда..."></textarea>
-        <button class="backup-action-btn primary" style="margin-top:8px" onclick="importBackupFromText()">✅ Восстановить из текста</button>
-      </div>
-      <div class="backup-status" id="import-status"></div>
-    </div>
-
-    <div style="display:flex;justify-content:flex-end;margin-top:4px">
-      <button class="backup-action-btn" onclick="closeBackupModal()">Закрыть</button>
-    </div>
-  </div>
 </div>
 
 <!-- ── MAIN ── -->
@@ -1865,7 +1750,7 @@
     <input type="hidden" id="f-name-ru"/> <input type="hidden" id="f-name-vi"/> <input type="hidden" id="f-name-en"/>
     <input type="hidden" id="f-desc-ru"/> <input type="hidden" id="f-desc-vi"/> <input type="hidden" id="f-desc-en"/>
     <input type="hidden" id="f-story-ru"/> <input type="hidden" id="f-story-vi"/> <input type="hidden" id="f-story-en"/>
-    <!-- f-notes-ru/en/vi are now real textareas in lang tabs -->
+    <input type="hidden" id="f-notes-ru"/> <input type="hidden" id="f-notes-vi"/> <input type="hidden" id="f-notes-en"/>
 
     <div class="grid-3 mb16">
       <div><label data-i="recipe.servings">Порции / Servings</label><input type="number" id="f-servings" value="2" min="1"/></div>
@@ -1924,87 +1809,25 @@
       </div>
     </div>
 
-    <!-- Ingredients / Steps / Notes — 4 lang tabs -->
-    <div>
-      <div class="mlang-tab-bar">
-        <button class="mlang-tab active" onclick="switchMlangTab('main')" id="mlang-tab-main">🍽 Основной</button>
-        <button class="mlang-tab" onclick="switchMlangTab('en')"  id="mlang-tab-en">🇬🇧 English</button>
-        <button class="mlang-tab" onclick="switchMlangTab('ru')"  id="mlang-tab-ru">🇷🇺 Русский</button>
-        <button class="mlang-tab" onclick="switchMlangTab('vi')"  id="mlang-tab-vi">🇻🇳 Tiếng Việt</button>
-      </div>
-      <div class="mlang-tab-content">
+    <!-- Ingredients -->
+    <div class="mb20">
+      <div class="section-title" data-i="recipe.ingredients">Ingredients</div>
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px">💡 КБЖУ рассчитывается автоматически при добавлении ингредиентов</p>
+      <div id="f-ingredients"></div>
+      <button class="btn btn-secondary btn-sm" onclick="addIngredientRow()">+ <span data-i="recipe.addIngredient">Add Ingredient</span></button>
+    </div>
 
-        <!-- MAIN -->
-        <div class="mlang-tab-panel active" id="mlang-panel-main">
-          <div class="mb20">
-            <div class="section-title" data-i="recipe.ingredients">Ingredients</div>
-            <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px">💡 КБЖУ рассчитывается автоматически при добавлении ингредиентов</p>
-            <div id="f-ingredients"></div>
-            <button class="btn btn-secondary btn-sm" onclick="addIngredientRow()">+ <span data-i="recipe.addIngredient">Add Ingredient</span></button>
-          </div>
-          <div class="mb20">
-            <div class="section-title" data-i="recipe.steps">Steps</div>
-            <div id="f-steps"></div>
-            <button class="btn btn-secondary btn-sm" onclick="addStepRow()">+ Add Step</button>
-          </div>
-          <div>
-            <label data-i="recipe.notes">Notes</label>
-            <textarea id="f-notes" rows="2" style="width:100%;box-sizing:border-box"></textarea>
-          </div>
-        </div>
+    <!-- Steps -->
+    <div class="mb20">
+      <div class="section-title" data-i="recipe.steps">Steps</div>
+      <div id="f-steps"></div>
+      <button class="btn btn-secondary btn-sm" onclick="addStepRow()">+ Add Step</button>
+    </div>
 
-        <!-- ENGLISH -->
-        <div class="mlang-tab-panel" id="mlang-panel-en">
-          <div class="mlang-copy-hint">🌐 English translation. Use 🌐 "Translate all" to auto-fill, or type manually.</div>
-          <div class="mb20">
-            <div class="section-title">🥕 Ingredients <span style="font-size:11px;color:var(--text-muted);font-weight:400">(English)</span></div>
-            <div id="f-ingredients-en"></div>
-            <button class="btn btn-secondary btn-sm" onclick="addMlangIngRow('en')">+ Add Ingredient (EN)</button>
-          </div>
-          <div class="mb20">
-            <div class="section-title">📋 Steps <span style="font-size:11px;color:var(--text-muted);font-weight:400">(English)</span></div>
-            <div id="f-steps-en"></div>
-            <button class="btn btn-secondary btn-sm" onclick="addMlangStepRow('en')">+ Add Step (EN)</button>
-          </div>
-          <div><label>Notes (English)</label>
-            <textarea id="f-notes-en" rows="2" style="width:100%;box-sizing:border-box"></textarea></div>
-        </div>
-
-        <!-- RUSSIAN -->
-        <div class="mlang-tab-panel" id="mlang-panel-ru">
-          <div class="mlang-copy-hint">🌐 Перевод на русский. Используй 🌐 "Перевести" или заполни вручную.</div>
-          <div class="mb20">
-            <div class="section-title">🥕 Ингредиенты <span style="font-size:11px;color:var(--text-muted);font-weight:400">(Русский)</span></div>
-            <div id="f-ingredients-ru"></div>
-            <button class="btn btn-secondary btn-sm" onclick="addMlangIngRow('ru')">+ Добавить (RU)</button>
-          </div>
-          <div class="mb20">
-            <div class="section-title">📋 Шаги <span style="font-size:11px;color:var(--text-muted);font-weight:400">(Русский)</span></div>
-            <div id="f-steps-ru"></div>
-            <button class="btn btn-secondary btn-sm" onclick="addMlangStepRow('ru')">+ Добавить шаг (RU)</button>
-          </div>
-          <div><label>Заметки (Русский)</label>
-            <textarea id="f-notes-ru" rows="2" style="width:100%;box-sizing:border-box"></textarea></div>
-        </div>
-
-        <!-- VIETNAMESE -->
-        <div class="mlang-tab-panel" id="mlang-panel-vi">
-          <div class="mlang-copy-hint">🌐 Bản dịch tiếng Việt. Dùng 🌐 "Dịch tất cả" hoặc nhập tay.</div>
-          <div class="mb20">
-            <div class="section-title">🥕 Nguyên liệu <span style="font-size:11px;color:var(--text-muted);font-weight:400">(Tiếng Việt)</span></div>
-            <div id="f-ingredients-vi"></div>
-            <button class="btn btn-secondary btn-sm" onclick="addMlangIngRow('vi')">+ Thêm nguyên liệu (VI)</button>
-          </div>
-          <div class="mb20">
-            <div class="section-title">📋 Các bước <span style="font-size:11px;color:var(--text-muted);font-weight:400">(Tiếng Việt)</span></div>
-            <div id="f-steps-vi"></div>
-            <button class="btn btn-secondary btn-sm" onclick="addMlangStepRow('vi')">+ Thêm bước (VI)</button>
-          </div>
-          <div><label>Ghi chú (Tiếng Việt)</label>
-            <textarea id="f-notes-vi" rows="2" style="width:100%;box-sizing:border-box"></textarea></div>
-        </div>
-
-      </div>
+    <!-- Notes -->
+    <div class="mb24">
+      <label data-i="recipe.notes">Notes</label>
+      <textarea id="f-notes" rows="2"></textarea>
     </div>
 
     <input type="hidden" id="f-id"/>
@@ -2181,8 +2004,6 @@ window.applyFirestoreData = () => {
   if (window._categories?.length) categories = window._categories;
   // Journal sync
   if (window._journal?.length)   journalNotes = window._journal;
-  if (window._waterLogs !== undefined) { waterLogs = window._waterLogs; localStorage.setItem('waterLogs', JSON.stringify(waterLogs)); }
-  if (window._waterGoal !== undefined) { waterGoal = window._waterGoal; localStorage.setItem('waterGoal', String(waterGoal)); }
   renderCategoryPills();
   renderCountryPills();
   renderRecipes();
@@ -2198,10 +2019,6 @@ window.resetAppData = () => {
   countries  = window._countries  = [...DEFAULT_COUNTRIES];
   categories = window._categories = [...DEFAULT_CATS];
   window._journal = [];
-  waterLogs = window._waterLogs = [];
-  waterGoal = window._waterGoal = 2000;
-  localStorage.setItem('waterLogs', '[]');
-  localStorage.setItem('waterGoal', '2000');
   renderCategoryPills();
   renderCountryPills();
   renderRecipes();
@@ -2215,8 +2032,6 @@ async function save() {
   window._countries  = countries;
   window._categories = categories;
   // journal is always managed via window._journal directly
-  window._waterLogs  = waterLogs;
-  window._waterGoal  = waterGoal;
   // Save to Firestore if logged in
   if (typeof window.firestoreSave === 'function') {
     window.showSyncStatus && window.showSyncStatus('saving');
@@ -2694,8 +2509,6 @@ function clearForm() {
   document.getElementById('kbju-auto-badge').classList.add('hidden');
   addIngredientRow();
   addStepRow();
-  if (typeof clearMlangTabs === 'function') clearMlangTabs();
-  switchMlangTab('main');
 }
 
 function fillForm(r) {
@@ -2740,7 +2553,6 @@ function fillForm(r) {
   // Steps
   document.getElementById('f-steps').innerHTML = '';
   (r.steps||[]).forEach(s => addStepRow(s));
-  if (typeof fillMlangTabs === 'function') fillMlangTabs(r);
   // check if was auto-translated
   if (r.nameI18n?.ru && r.nameI18n?.en && r.nameI18n?.vi) {
     document.getElementById('kbju-auto-badge').classList.remove('hidden');
@@ -2988,16 +2800,10 @@ function saveRecipeForm(mode = 'publish', silent = false) {
     vi: document.getElementById('f-story-vi').value || document.getElementById('f-story').value,
   };
   const notesI18n = {
-    ru: (document.getElementById('f-notes-ru')?.value) || document.getElementById('f-notes').value,
-    en: (document.getElementById('f-notes-en')?.value) || document.getElementById('f-notes').value,
-    vi: (document.getElementById('f-notes-vi')?.value) || document.getElementById('f-notes').value,
+    ru: document.getElementById('f-notes-ru').value || document.getElementById('f-notes').value,
+    en: document.getElementById('f-notes-en').value || document.getElementById('f-notes').value,
+    vi: document.getElementById('f-notes-vi').value || document.getElementById('f-notes').value,
   };
-  const ingredientsI18n = (typeof collectMlangIngs === 'function') ? {
-    en: collectMlangIngs('en'), ru: collectMlangIngs('ru'), vi: collectMlangIngs('vi'),
-  } : {};
-  const stepsI18n = (typeof collectMlangSteps === 'function') ? {
-    en: collectMlangSteps('en'), ru: collectMlangSteps('ru'), vi: collectMlangSteps('vi'),
-  } : {};
 
   const cookingHours = parseInt(document.getElementById('f-hours').value) || 0;
   const cookingMinutes = parseInt(document.getElementById('f-minutes').value) || 0;
@@ -3030,9 +2836,7 @@ function saveRecipeForm(mode = 'publish', silent = false) {
       carbs: parseInt(document.getElementById('f-carbs').value) || 0,
     },
     ingredients,
-    ingredientsI18n,
     steps,
-    stepsI18n,
     substitutes: existing?.substitutes || {},
     viewedAt: existing?.viewedAt || [],
     createdAt: existing?.createdAt || new Date().toISOString(),
@@ -3650,15 +3454,8 @@ async function autoTranslateForm() {
   const desc = document.getElementById('f-description').value.trim();
   const story = document.getElementById('f-story').value.trim();
   const notes = document.getElementById('f-notes').value.trim();
-  if (!name) { alert('Введите название рецепта перед переводом'); return; }
 
-  const mainIngs = Array.from(document.querySelectorAll('#f-ingredients .ing-row-grid')).map(row => ({
-    name: row.querySelector('.ing-name-input')?.value || '',
-    amount: parseFloat(row.querySelector('.ing-amount-input')?.value) || 0,
-    unit: row.querySelector('.ing-unit-input')?.value || 'г',
-  })).filter(i => i.name);
-  const mainSteps = Array.from(document.querySelectorAll('#f-steps .step-row')).map(row =>
-    (row.querySelector('.step-text-input')?.value || '').trim()).filter(Boolean);
+  if (!name) { alert('Введите название рецепта перед переводом'); return; }
 
   const btn = document.getElementById('translate-btn');
   const statusEl = document.getElementById('translate-status');
@@ -3666,50 +3463,50 @@ async function autoTranslateForm() {
   btn.innerHTML = '<span class="translate-spinner">⏳</span> Переводим...';
   statusEl.textContent = '';
 
-  const prompt = `Переведи поля рецепта на русский (ru), английский (en) и вьетнамский (vi).
+  const prompt = `Переведи следующие поля рецепта на русский (ru), английский (en) и вьетнамский (vi).
 Ответь ТОЛЬКО валидным JSON без markdown, без пояснений.
-Поля: name:"${name}", description:"${desc}", story:"${story}", notes:"${notes}"
-Ингредиенты: ${JSON.stringify(mainIngs.map(i=>i.name))}
-Шаги: ${JSON.stringify(mainSteps)}
-Формат: {"name":{"ru":"...","en":"...","vi":"..."},"description":{"ru":"...","en":"...","vi":"..."},"story":{"ru":"...","en":"...","vi":"..."},"notes":{"ru":"...","en":"...","vi":"..."},"ingredients":{"ru":["..."],"en":["..."],"vi":["..."]},"steps":{"ru":["..."],"en":["..."],"vi":["..."]}}`;
+
+Поля:
+- name: "${name}"
+- description: "${desc}"
+- story: "${story}"
+- notes: "${notes}"
+
+Формат ответа:
+{"name":{"ru":"...","en":"...","vi":"..."},"description":{"ru":"...","en":"...","vi":"..."},"story":{"ru":"...","en":"...","vi":"..."},"notes":{"ru":"...","en":"...","vi":"..."}}`;
 
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 2000,
-        messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
     });
     const data = await resp.json();
-    const parsed = JSON.parse(data.content?.map(b=>b.text||'').join('').trim().replace(/```json|```/g,'').trim());
+    const text = data.content?.map(b => b.text||'').join('').trim();
+    const clean = text.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(clean);
 
+    // Fill hidden fields
     ['ru','vi','en'].forEach(l => {
-      const n=document.getElementById('f-name-'+l); if(n) n.value=parsed.name?.[l]||name;
-      const d=document.getElementById('f-desc-'+l); if(d) d.value=parsed.description?.[l]||desc;
-      const s=document.getElementById('f-story-'+l); if(s) s.value=parsed.story?.[l]||story;
-      const nt=document.getElementById('f-notes-'+l); if(nt) nt.value=parsed.notes?.[l]||notes;
+      const n = document.getElementById('f-name-'+l); if(n) n.value = parsed.name?.[l]||name;
+      const d = document.getElementById('f-desc-'+l); if(d) d.value = parsed.description?.[l]||desc;
+      const s = document.getElementById('f-story-'+l); if(s) s.value = parsed.story?.[l]||story;
+      const nt= document.getElementById('f-notes-'+l); if(nt) nt.value = parsed.notes?.[l]||notes;
     });
-    ['ru','en','vi'].forEach(l => {
-      const names=parsed.ingredients?.[l]||[];
-      const cont=document.getElementById('f-ingredients-'+l);
-      if(cont){cont.innerHTML='';_mlangIngCount[l]=0;
-        mainIngs.forEach((ing,i)=>addMlangIngRow(l,{name:names[i]||ing.name,amount:ing.amount,unit:ing.unit}));
-        if(!mainIngs.length) addMlangIngRow(l);}
-      const stepsTr=parsed.steps?.[l]||[];
-      const sc=document.getElementById('f-steps-'+l);
-      if(sc){sc.innerHTML='';_mlangStepCount[l]=0;
-        stepsTr.forEach(s=>addMlangStepRow(l,s));
-        if(!stepsTr.length) addMlangStepRow(l);}
-    });
-    statusEl.textContent='✅ Переведено: ингредиенты, шаги, описание — RU / EN / VI';
-    statusEl.style.color='var(--success)';
+
+    statusEl.textContent = `✅ Переведено: RU / EN / VI`;
+    statusEl.style.color = 'var(--success)';
     document.getElementById('kbju-auto-badge').classList.remove('hidden');
   } catch(e) {
-    statusEl.textContent='❌ Ошибка перевода: '+e.message;
-    statusEl.style.color='var(--danger)';
+    statusEl.textContent = '❌ Ошибка перевода: ' + e.message;
+    statusEl.style.color = 'var(--danger)';
   } finally {
-    btn.disabled=false;
-    btn.innerHTML='🌐 <span>Перевести на все языки</span>';
+    btn.disabled = false;
+    btn.innerHTML = '🌐 <span>Перевести на все языки</span>';
   }
 }
 
@@ -3937,9 +3734,6 @@ let waterGoal = parseInt(localStorage.getItem('waterGoal') || '2000');
 function saveWaterData() {
   localStorage.setItem('waterLogs', JSON.stringify(waterLogs));
   localStorage.setItem('waterGoal', String(waterGoal));
-  // Use save() so window._recipes and all other data are synced BEFORE writing to Firestore
-  // This prevents overwriting recipes with an empty array
-  save();
 }
 
 function getTodayStr() { return new Date().toISOString().slice(0,10); }
@@ -5357,173 +5151,6 @@ window.closeModal = function(id) {
   }
   if (typeof _origCloseModal === 'function') _origCloseModal(id);
 };
-
-// ─── MULTILANG TABS JS ───────────────────────────────────────────────────────
-
-function switchMlangTab(tab) {
-  ['main','en','ru','vi'].forEach(t => {
-    document.getElementById('mlang-tab-'+t)?.classList.toggle('active', t===tab);
-    document.getElementById('mlang-panel-'+t)?.classList.toggle('active', t===tab);
-  });
-}
-
-let _mlangIngCount = {en:0,ru:0,vi:0};
-let _mlangStepCount = {en:0,ru:0,vi:0};
-
-function addMlangIngRow(l, ing=null) {
-  _mlangIngCount[l]=(_mlangIngCount[l]||0)+1;
-  const id='mlang-ing-'+l+'-'+_mlangIngCount[l];
-  const cont=document.getElementById('f-ingredients-'+l); if(!cont) return;
-  const row=document.createElement('div'); row.className='ing-row-grid'; row.id=id;
-  const unitOpts=UNITS.map(u=>'<option value="'+u+'"'+((ing?.unit||'г')===u?' selected':'')+'>'+u+'</option>').join('');
-  row.innerHTML='<input type="text" placeholder="Ingredient" value="'+(ing?.name||'')+'" class="mlang-ing-name"/>'+
-    '<input type="number" placeholder="0" value="'+(ing?.amount||'')+'" class="mlang-ing-amount" min="0"/>'+
-    '<select class="mlang-ing-unit">'+unitOpts+'</select>'+
-    '<button class="btn btn-danger btn-icon" onclick="document.getElementById(''+id+'').remove()">✕</button>';
-  cont.appendChild(row);
-}
-
-function addMlangStepRow(l, text='') {
-  _mlangStepCount[l]=(_mlangStepCount[l]||0)+1;
-  const sid='mlang-step-'+l+'-'+_mlangStepCount[l];
-  const cont=document.getElementById('f-steps-'+l); if(!cont) return;
-  const idx=cont.children.length+1;
-  const t=(typeof text==='string')?text:(text?.text||'');
-  const row=document.createElement('div'); row.className='step-row'; row.id=sid;
-  row.innerHTML='<div class="step-row-header">'+
-    '<div class="step-num">'+idx+'</div>'+
-    '<input type="text" class="step-text-input mlang-step-text" value="'+t.replace(/"/g,'&quot;')+'" placeholder="Step '+idx+'" style="flex:1"/>'+
-    '<button class="btn btn-danger btn-icon" style="flex-shrink:0" onclick="this.closest('.step-row').remove()">✕</button>'+
-    '</div>';
-  cont.appendChild(row);
-}
-
-function collectMlangIngs(l) {
-  return Array.from(document.querySelectorAll('#f-ingredients-'+l+' .ing-row-grid')).map((row,i)=>({
-    id:'i'+(i+1), name:row.querySelector('.mlang-ing-name')?.value||'',
-    amount:parseFloat(row.querySelector('.mlang-ing-amount')?.value)||0,
-    unit:row.querySelector('.mlang-ing-unit')?.value||'г',
-  })).filter(x=>x.name);
-}
-
-function collectMlangSteps(l) {
-  return Array.from(document.querySelectorAll('#f-steps-'+l+' .step-row')).map(row=>{
-    const t=(row.querySelector('.step-text-input')?.value||'').trim();
-    return t?{text:t,photo:'',video:''}:null;
-  }).filter(Boolean);
-}
-
-function fillMlangTabs(r) {
-  ['en','ru','vi'].forEach(l=>{
-    const ingC=document.getElementById('f-ingredients-'+l); if(ingC) ingC.innerHTML='';
-    const stepC=document.getElementById('f-steps-'+l); if(stepC) stepC.innerHTML='';
-    _mlangIngCount[l]=0; _mlangStepCount[l]=0;
-    (r.ingredientsI18n?.[l]?.length?r.ingredientsI18n[l]:(r.ingredients||[])).forEach(ing=>addMlangIngRow(l,ing));
-    (r.stepsI18n?.[l]?.length?r.stepsI18n[l]:(r.steps||[])).forEach(s=>addMlangStepRow(l,s));
-    const nt=document.getElementById('f-notes-'+l); if(nt) nt.value=r.notesI18n?.[l]||r.notes||'';
-  });
-}
-
-function clearMlangTabs() {
-  ['en','ru','vi'].forEach(l=>{
-    const ingC=document.getElementById('f-ingredients-'+l); if(ingC) ingC.innerHTML='';
-    const stepC=document.getElementById('f-steps-'+l); if(stepC) stepC.innerHTML='';
-    _mlangIngCount[l]=0; _mlangStepCount[l]=0;
-    const nt=document.getElementById('f-notes-'+l); if(nt) nt.value='';
-    addMlangIngRow(l); addMlangStepRow(l);
-  });
-}
-
-// ─── BACKUP / RESTORE ────────────────────────────────────────────────────────
-
-function openBackupModal() {
-  document.getElementById('backup-modal').style.display = '';
-  document.getElementById('export-status').textContent = '';
-  document.getElementById('import-status').textContent = '';
-  document.getElementById('backup-paste-area').value = '';
-}
-function closeBackupModal() {
-  document.getElementById('backup-modal').style.display = 'none';
-}
-
-function _buildBackupData() {
-  return {
-    _version: 2,
-    _exportedAt: new Date().toISOString(),
-    recipes,
-    mealPlan,
-    profile,
-    countries,
-    categories,
-    journal: journalNotes || [],
-    waterLogs,
-    waterGoal,
-  };
-}
-
-function exportBackup() {
-  const data = _buildBackupData();
-  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'recipes_backup_' + new Date().toISOString().slice(0,10) + '.json';
-  a.click();
-  URL.revokeObjectURL(url);
-  document.getElementById('export-status').innerHTML = '<span style="color:var(--success)">✅ Файл скачан!</span>';
-}
-
-function copyBackupToClipboard() {
-  const text = JSON.stringify(_buildBackupData(), null, 2);
-  navigator.clipboard.writeText(text).then(() => {
-    document.getElementById('export-status').innerHTML = '<span style="color:var(--success)">✅ Скопировано в буфер обмена!</span>';
-  }).catch(() => {
-    document.getElementById('backup-paste-area').value = text;
-    document.getElementById('export-status').innerHTML = '<span style="color:var(--text-muted)">Автокопирование не сработало — JSON вставлен в поле ниже</span>';
-  });
-}
-
-function importBackupFile(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    document.getElementById('backup-paste-area').value = ev.target.result;
-    importBackupFromText();
-  };
-  reader.readAsText(file);
-  e.target.value = '';
-}
-
-function importBackupFromText() {
-  const statusEl = document.getElementById('import-status');
-  try {
-    const raw = document.getElementById('backup-paste-area').value.trim();
-    if (!raw) { statusEl.innerHTML = '<span style="color:#C0504D">⚠️ Пусто — вставь JSON</span>'; return; }
-    const data = JSON.parse(raw);
-
-    if (data.recipes?.length) {
-      recipes = data.recipes;
-      window._recipes = recipes;
-    }
-    if (data.mealPlan) { mealPlan = data.mealPlan; window._mealPlan = mealPlan; }
-    if (data.profile?.name) { profile = data.profile; window._profile = profile; }
-    if (data.countries?.length) { countries = data.countries; window._countries = countries; }
-    if (data.categories?.length) { categories = data.categories; window._categories = categories; }
-    if (data.journal?.length) { journalNotes = data.journal; window._journal = journalNotes; }
-    if (data.waterLogs) { waterLogs = data.waterLogs; window._waterLogs = waterLogs; localStorage.setItem('waterLogs', JSON.stringify(waterLogs)); }
-    if (data.waterGoal) { waterGoal = data.waterGoal; window._waterGoal = waterGoal; localStorage.setItem('waterGoal', String(waterGoal)); }
-
-    renderCategoryPills();
-    renderCountryPills();
-    renderRecipes();
-    save();
-
-    statusEl.innerHTML = '<span style="color:var(--success)">✅ Восстановлено ' + (data.recipes?.length||0) + ' рецептов! Данные сохранены в Firestore.</span>';
-  } catch(e) {
-    statusEl.innerHTML = '<span style="color:#C0504D">❌ Ошибка: ' + e.message + '</span>';
-  }
-}
 
 function renderReportChart(id, data, color, threshold) {
   const el = document.getElementById(id);
