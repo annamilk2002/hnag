@@ -3853,9 +3853,9 @@ let waterGoal = parseInt(localStorage.getItem('waterGoal') || '2000');
 function saveWaterData() {
   localStorage.setItem('waterLogs', JSON.stringify(waterLogs));
   localStorage.setItem('waterGoal', String(waterGoal));
-  window._waterLogs = waterLogs;
-  window._waterGoal = waterGoal;
-  if (typeof window.firestoreSave === 'function') window.firestoreSave();
+  // Use save() so window._recipes and all other data are synced BEFORE writing to Firestore
+  // This prevents overwriting recipes with an empty array
+  save();
 }
 
 function getTodayStr() { return new Date().toISOString().slice(0,10); }
